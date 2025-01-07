@@ -2,7 +2,19 @@
 const Website = require('../models/WebsiteModel');
 const multer = require('multer');
 const path = require('path');
-const bucket = require('../config/storage');
+const { Storage } = require('@google-cloud/storage');
+require('dotenv').config();
+
+// Initialize storage with options
+const storage = new Storage({
+  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
+  credentials: {
+    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n')  // Handle newline characters
+  }
+});
+
+const bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -14,60 +26,28 @@ const upload = multer({
   },
 });
 
-const uploadToGCS = async (file, retries = 3) => {
-  let attempt = 0;
-  
-  while (attempt < retries) {
-    try {
-      const blob = bucket.file(`${Date.now()}-${file.originalname}`);
-      
-      // Set upload options with timeout and retry settings
-      const blobStream = blob.createWriteStream({
-        resumable: false,
-        timeout: 30000, // 30 seconds timeout
-        metadata: {
-          contentType: file.mimetype,
-        },
-        public: true // Makes the file public by default
-      });
-
-      await new Promise((resolve, reject) => {
-        // Handle stream errors
-        blobStream.on('error', (err) => {
-          console.error(`Upload attempt ${attempt + 1} failed:`, err);
-          blobStream.end();
-          reject(err);
-        });
-
-        // Handle successful upload
-        blobStream.on('finish', async () => {
-          try {
-            // Generate signed URL instead of making public
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-            resolve(publicUrl);
-          } catch (err) {
-            console.error('Error generating public URL:', err);
-            reject(err);
-          }
-        });
-
-        // Write file buffer to stream
-        blobStream.end(file.buffer);
-      });
-
-      // If we get here, upload was successful
-      return `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-    } catch (error) {
-      attempt++;
-      console.error(`Upload attempt ${attempt} failed:`, error);
-      
-      if (attempt === retries) {
-        throw new Error('Max upload retries reached');
+const uploadToGCS = async (file) => {
+  try {
+    const bucket = storage.bucket(bucketName);
+    const fileName = `${Date.now()}-${file.originalname}`;
+    const fileOptions = {
+      public: true,
+      metadata: {
+        contentType: file.mimetype,
       }
-      
-      // Wait before retrying (exponential backoff)
-      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-    }
+    };
+
+    // Create file in bucket
+    const cloudFile = bucket.file(fileName);
+
+    // Upload file directly using save() method
+    await cloudFile.save(file.buffer, fileOptions);
+
+    // Get public URL
+    return `https://storage.googleapis.com/${bucketName}/${fileName}`;
+  } catch (error) {
+    console.error('Upload error details:', error);
+    throw new Error(`Upload failed: ${error.message}`);
   }
 };
 
@@ -88,7 +68,15 @@ exports.createWebsite = [upload.single('file'), async (req, res) => {
 
     if (req.file) {
       try {
+        console.log('Starting file upload...');
+        console.log('File details:', {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size
+        });
+        
         imageUrl = await uploadToGCS(req.file);
+        console.log('Upload successful, URL:', imageUrl);
       } catch (uploadError) {
         console.error('File upload failed:', uploadError);
         return res.status(500).json({ 
