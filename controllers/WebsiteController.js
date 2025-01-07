@@ -14,6 +14,63 @@ const upload = multer({
   },
 });
 
+const uploadToGCS = async (file, retries = 3) => {
+  let attempt = 0;
+  
+  while (attempt < retries) {
+    try {
+      const blob = bucket.file(`${Date.now()}-${file.originalname}`);
+      
+      // Set upload options with timeout and retry settings
+      const blobStream = blob.createWriteStream({
+        resumable: false,
+        timeout: 30000, // 30 seconds timeout
+        metadata: {
+          contentType: file.mimetype,
+        },
+        public: true // Makes the file public by default
+      });
+
+      await new Promise((resolve, reject) => {
+        // Handle stream errors
+        blobStream.on('error', (err) => {
+          console.error(`Upload attempt ${attempt + 1} failed:`, err);
+          blobStream.end();
+          reject(err);
+        });
+
+        // Handle successful upload
+        blobStream.on('finish', async () => {
+          try {
+            // Generate signed URL instead of making public
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+            resolve(publicUrl);
+          } catch (err) {
+            console.error('Error generating public URL:', err);
+            reject(err);
+          }
+        });
+
+        // Write file buffer to stream
+        blobStream.end(file.buffer);
+      });
+
+      // If we get here, upload was successful
+      return `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+    } catch (error) {
+      attempt++;
+      console.error(`Upload attempt ${attempt} failed:`, error);
+      
+      if (attempt === retries) {
+        throw new Error('Max upload retries reached');
+      }
+      
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+};
+
 exports.createWebsite = [upload.single('file'), async (req, res) => {
   try {
     const { ownerId, websiteName, websiteLink } = req.body;
@@ -22,7 +79,6 @@ exports.createWebsite = [upload.single('file'), async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Check if website URL is already in use
     const existingWebsite = await Website.findOne({ websiteLink }).lean();
     if (existingWebsite) {
       return res.status(409).json({ message: 'Website URL already exists' });
@@ -30,38 +86,16 @@ exports.createWebsite = [upload.single('file'), async (req, res) => {
 
     let imageUrl = '';
 
-    // Upload file to GCS if provided
     if (req.file) {
-      const blob = bucket.file(`${Date.now()}-${req.file.originalname}`);
-      const blobStream = blob.createWriteStream({
-        resumable: false,
-        contentType: req.file.mimetype,
-      });
-
-      await new Promise((resolve, reject) => {
-        blobStream.on('error', (err) => {
-          console.error('Upload error:', err);
-          reject(new Error('Failed to upload file.'));
+      try {
+        imageUrl = await uploadToGCS(req.file);
+      } catch (uploadError) {
+        console.error('File upload failed:', uploadError);
+        return res.status(500).json({ 
+          message: 'Failed to upload file',
+          error: uploadError.message 
         });
-
-        blobStream.on('finish', async () => {
-          try {
-            console.log('File upload finished, attempting to make public...');
-            await blob.makePublic();
-            console.log('File made public successfully');
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-            if (req.file.mimetype.startsWith('image')) {
-              imageUrl = publicUrl;
-            }
-            resolve();
-          } catch (err) {
-            console.error('Error making file public:', err.message);
-            reject(new Error('Failed to make file public.'));
-          }
-        });
-        
-        blobStream.end(req.file.buffer);
-      });
+      }
     }
 
     const newWebsite = new Website({
@@ -74,8 +108,11 @@ exports.createWebsite = [upload.single('file'), async (req, res) => {
     const savedWebsite = await newWebsite.save();
     res.status(201).json(savedWebsite);
   } catch (error) {
-    console.error('Error creating website:', error); // Log detailed error
-    res.status(500).json({ message: 'Failed to create website', error });
+    console.error('Error creating website:', error);
+    res.status(500).json({ 
+      message: 'Failed to create website',
+      error: error.message 
+    });
   }
 }];
 
