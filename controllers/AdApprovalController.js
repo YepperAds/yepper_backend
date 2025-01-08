@@ -8,6 +8,7 @@ const sendEmailNotification = require('./emailService');
 const Payment = require('../models/PaymentModel');
 const Flutterwave = require('flutterwave-node-v3');
 const axios = require('axios');
+const Withdrawal = require('../models/WithdrawalModel');
 
 const flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
@@ -539,7 +540,6 @@ exports.adPaymentCallback = async (req, res) => {
   }
 };
 
-// Add a new route to get balance
 exports.getWebOwnerBalance = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -561,6 +561,100 @@ exports.getWebOwnerBalance = async (req, res) => {
       message: 'Error fetching balance', 
       error: error.message 
     });
+  }
+};
+
+exports.initiateWithdrawal = async (req, res) => {
+  try {
+    const { userId, amount, phoneNumber } = req.body;
+
+    if (!userId || !amount || !phoneNumber) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Check if user has sufficient balance
+    const balance = await WebOwnerBalance.findOne({ userId });
+    if (!balance || balance.availableBalance < amount) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    // Create withdrawal request
+    const withdrawal = new Withdrawal({
+      userId,
+      amount,
+      phoneNumber,
+    });
+
+    // Initialize MoMo transfer using Flutterwave
+    const transferPayload = {
+      account_bank: 'MPS', // Mobile Payment Service
+      account_number: phoneNumber,
+      amount,
+      currency: 'RWF',
+      beneficiary_name: 'MoMo Transfer',
+      reference: `MOMO-${Date.now()}`,
+      callback_url: "https://yepper-backend.onrender.com/api/accept/withdrawal-callback",
+      debit_currency: 'RWF'
+    };
+
+    const response = await axios.post('https://api.flutterwave.com/v3/transfers', transferPayload, {
+      headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` }
+    });
+
+    if (response.data?.status === 'success') {
+      withdrawal.transactionId = response.data.data.id;
+      withdrawal.status = 'processing';
+      await withdrawal.save();
+
+      // Update user's available balance
+      await WebOwnerBalance.findOneAndUpdate(
+        { userId },
+        { $inc: { availableBalance: -amount } }
+      );
+
+      return res.status(200).json({
+        message: 'Withdrawal initiated successfully',
+        withdrawal
+      });
+    } else {
+      withdrawal.status = 'failed';
+      withdrawal.failureReason = 'Transfer initiation failed';
+      await withdrawal.save();
+      return res.status(400).json({ message: 'Failed to initiate transfer' });
+    }
+  } catch (error) {
+    console.error('Withdrawal error:', error);
+    res.status(500).json({ message: 'Error processing withdrawal', error: error.message });
+  }
+};
+
+exports.withdrawalCallback = async (req, res) => {
+  try {
+    const { data } = req.body;
+    const withdrawal = await Withdrawal.findOne({ transactionId: data.id });
+
+    if (!withdrawal) {
+      return res.status(404).json({ message: 'Withdrawal not found' });
+    }
+
+    if (data.status === 'successful') {
+      withdrawal.status = 'completed';
+    } else {
+      withdrawal.status = 'failed';
+      withdrawal.failureReason = data.complete_message;
+      
+      // Refund the amount back to available balance
+      await WebOwnerBalance.findOneAndUpdate(
+        { userId: withdrawal.userId },
+        { $inc: { availableBalance: withdrawal.amount } }
+      );
+    }
+
+    await withdrawal.save();
+    res.status(200).json({ message: 'Callback processed successfully' });
+  } catch (error) {
+    console.error('Withdrawal callback error:', error);
+    res.status(500).json({ message: 'Error processing callback', error: error.message });
   }
 };
 
