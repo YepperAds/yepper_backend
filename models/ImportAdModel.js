@@ -1,27 +1,3 @@
-// // importAdSchema.js
-// const mongoose = require('mongoose');
-
-// const importAdSchema = new mongoose.Schema({
-//   userId: { type: String, required: true },
-//   businessName: { type: String, required: true },
-//   businessLocation: { type: String },
-//   adDescription: { type: String },
-//   imageUrl: { type: String },
-//   pdfUrl: { type: String },
-//   videoUrl: { type: String },
-//   templateType: { type: String},
-//   categories: [{ type: String }],
-//   paymentStatus: { type: String, default: 'pending' },
-//   paymentRef: { type: String },
-//   amount: { type: Number },
-//   email: { type: String },
-//   phoneNumber: { type: String },
-// }, { timestamps: true });
-
-// module.exports = mongoose.model('ImportAd', importAdSchema);
-
-
-
 // ImportAdModel.js
 const mongoose = require('mongoose');
 const importAdSchema = new mongoose.Schema({
