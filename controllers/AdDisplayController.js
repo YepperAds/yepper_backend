@@ -84,9 +84,10 @@ exports.displayAd = async (req, res) => {
         const targetUrl = selectedAd.businessLink.startsWith('http') ? selectedAd.businessLink : `https://${selectedAd.businessLink}`;
         return `
           <a href="${targetUrl}" target="_blank" class="ad" data-ad-id="${selectedAd._id}">
-            ${imageUrl ? `<img src="${selectedAd.imageUrl}" alt="Ad Image">` : ''}
+            ${imageUrl ? `<img src="$selectedAd.imageUrl}" alt="Ad Image">` : ''}
             ${selectedAd.pdfUrl ? `<a href="${selectedAd.pdfUrl}" target="_blank">Download PDF</a>` : ''}
             ${selectedAd.videoUrl ? `<video src="${selectedAd.videoUrl}" controls></video>` : ''}
+            <p>${selectedAd.businessName}</p>
           </a>
         `;
       })

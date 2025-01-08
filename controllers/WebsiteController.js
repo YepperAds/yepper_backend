@@ -5,13 +5,24 @@ const path = require('path');
 const { Storage } = require('@google-cloud/storage');
 require('dotenv').config();
 
-// Initialize storage with options
+// Create credentials object from environment variables
+const credentials = {
+  type: 'service_account',
+  project_id: process.env.GOOGLE_CLOUD_PROJECT_ID,
+  private_key_id: process.env.GOOGLE_CLOUD_PRIVATE_KEY_ID,
+  private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
+  client_id: process.env.GOOGLE_CLOUD_CLIENT_ID,
+  auth_uri: "https://accounts.google.com/o/oauth2/auth",
+  token_uri: "https://oauth2.googleapis.com/token",
+  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(process.env.GOOGLE_CLOUD_CLIENT_EMAIL)}`
+};
+
+// Initialize storage with credentials object
 const storage = new Storage({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
-  credentials: {
-    client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY.replace(/\\n/g, '\n')  // Handle newline characters
-  }
+  credentials,
+  projectId: process.env.GOOGLE_CLOUD_PROJECT_ID
 });
 
 const bucketName = process.env.GOOGLE_CLOUD_BUCKET_NAME;
@@ -28,25 +39,35 @@ const upload = multer({
 
 const uploadToGCS = async (file) => {
   try {
+    console.log('Initializing upload with credentials for:', credentials.client_email);
+    
     const bucket = storage.bucket(bucketName);
     const fileName = `${Date.now()}-${file.originalname}`;
-    const fileOptions = {
-      public: true,
-      metadata: {
-        contentType: file.mimetype,
-      }
-    };
-
+    
     // Create file in bucket
     const cloudFile = bucket.file(fileName);
+    
+    // Upload with promise
+    await cloudFile.save(file.buffer, {
+      metadata: {
+        contentType: file.mimetype,
+      },
+      public: true,
+      validation: 'md5'
+    });
 
-    // Upload file directly using save() method
-    await cloudFile.save(file.buffer, fileOptions);
+    // Make file public
+    await cloudFile.makePublic();
 
-    // Get public URL
-    return `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    const publicUrl = `https://storage.googleapis.com/${bucketName}/${fileName}`;
+    console.log('File uploaded successfully to:', publicUrl);
+    return publicUrl;
   } catch (error) {
-    console.error('Upload error details:', error);
+    console.error('Detailed upload error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
     throw new Error(`Upload failed: ${error.message}`);
   }
 };
