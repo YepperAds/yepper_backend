@@ -28,7 +28,7 @@ const corsOptions = {
   origin: function(origin, callback) {
     // Allow requests from null origin (local files), localhost:3000, and your production domain
     const allowedOrigins = [
-      'https://ads-yepper.vercel.app',
+      'https://www.yepper.cc',
       'null',
       'file://',
       process.env.CLIENT_URL
@@ -67,7 +67,7 @@ app.use('/api/payout', payoutRoutes);
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'https://ads-yepper.vercel.app',
+    origin: process.env.CLIENT_URL || 'https://www.yepper.cc',
     methods: ['GET', 'POST'],
     credentials: true
   }
