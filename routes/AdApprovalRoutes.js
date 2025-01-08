@@ -13,6 +13,8 @@ router.put('/confirm/:adId', adApprovalController.confirmAdDisplay);
 router.post('/initiate-payment', adApprovalController.initiateAdPayment);
 router.get('/callback', adApprovalController.adPaymentCallback);
 router.get('/balance/:userId', adApprovalController.getWebOwnerBalance);
+router.post('/withdraw', adApprovalController.initiateWithdrawal);
+router.post('/withdrawal-callback', adApprovalController.withdrawalCallback);
 router.get('/payments/:userId', adApprovalController.getOwnerPayments);
 router.get('/approved-ads', adApprovalController.getApprovedAds);
 router.get('/approved/:ownerId', adApprovalController.getApprovedAdsByUser);
