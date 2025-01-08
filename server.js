@@ -45,7 +45,7 @@ const PORT = process.env.PORT || 5000;
 //   allowedHeaders: ['Content-Type', 'Authorization']
 // };
 
-const cors = require('cors');
+// const cors = require('cors');
 
 app.use(cors({
   origin: '*',
