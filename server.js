@@ -24,11 +24,28 @@ const pictureRoutes = require('./routes/PictureRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000', // Add this line
+const corsOptions = {
+  origin: function(origin, callback) {
+    // Allow requests from null origin (local files), localhost:3000, and your production domain
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'null',
+      'file://',
+      process.env.CLIENT_URL
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

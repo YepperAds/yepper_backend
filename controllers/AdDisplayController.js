@@ -46,10 +46,10 @@ const ImportAd = require('../models/ImportAdModel');
 
 exports.displayAd = async (req, res) => {
   try {
-    const { space, website, category } = req.query;
+    const { space, website, category, callback } = req.query;
     const adSpace = await AdSpace.findById(space).populate({
       path: 'selectedAds',
-      match: { approved: true, confirmed: true }, // Only retrieve ads that are both approved and confirmed
+      match: { approved: true, confirmed: true }
     });
 
     const currentDate = new Date();
@@ -81,17 +81,28 @@ exports.displayAd = async (req, res) => {
     const adsHtml = adsToShow
       .map((selectedAd) => {
         const imageUrl = selectedAd.imageUrl ? selectedAd.imageUrl : '';
-        const targetUrl = selectedAd.businessLink.startsWith('http') ? selectedAd.businessLink : `https://${selectedAd.businessLink}`;
+        const targetUrl = selectedAd.businessLink.startsWith('http') ? 
+          selectedAd.businessLink : `https://${selectedAd.businessLink}`;
         return `
-          <a href="${targetUrl}" target="_blank" class="ad" data-ad-id="${selectedAd._id}">
-            ${imageUrl ? `<img src="$selectedAd.imageUrl}" alt="Ad Image">` : ''}
-            ${selectedAd.pdfUrl ? `<a href="${selectedAd.pdfUrl}" target="_blank">Download PDF</a>` : ''}
-            ${selectedAd.videoUrl ? `<video src="${selectedAd.videoUrl}" controls></video>` : ''}
-            <p>${selectedAd.businessName}</p>
-          </a>
+          <div class="ad-container">
+            <a href="${targetUrl}" target="_blank" class="ad" data-ad-id="${selectedAd._id}" 
+                onclick="recordAdClick('${selectedAd._id}')">
+              ${imageUrl ? `<img src="${selectedAd.imageUrl}" alt="Ad Image">` : ''}
+              ${selectedAd.pdfUrl ? `<a href="${selectedAd.pdfUrl}" target="_blank">Download PDF</a>` : ''}
+              ${selectedAd.videoUrl ? `<video src="${selectedAd.videoUrl}" controls></video>` : ''}
+              <p>Sponsored by ${selectedAd.businessName}</p>
+            </a>
+          </div>
         `;
       })
       .join('');
+
+    if (callback) {
+      res.set('Content-Type', 'application/javascript');
+      res.send(`${callback}(${JSON.stringify({ html: adsHtml })})`);
+    } else {
+      res.status(200).send(adsHtml);
+    }
 
     res.status(200).send(adsHtml);
   } catch (error) {
