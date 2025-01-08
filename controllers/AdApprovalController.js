@@ -275,47 +275,88 @@ exports.getAdDetails = async (req, res) => {
   }
 };
 
+// exports.confirmAdDisplay = async (req, res) => {
+//   try {
+//     const { adId } = req.params;
+
+//     // First, find and update the ad's confirmation status
+//     const confirmedAd = await ImportAd.findByIdAndUpdate(
+//       adId,
+//       { confirmed: true },
+//       { new: true }
+//     ).populate('selectedSpaces');
+
+//     if (!confirmedAd) {
+//       return res.status(404).json({ message: 'Ad not found' });
+//     }
+
+//     // Now that the ad is confirmed, update all selected ad spaces to include this ad
+//     const spaceUpdates = confirmedAd.selectedSpaces.map(async (spaceId) => {
+//       return AdSpace.findByIdAndUpdate(
+//         spaceId,
+//         { 
+//           $push: { 
+//             activeAds: {
+//               adId: confirmedAd._id,
+//               imageUrl: confirmedAd.imageUrl,
+//               pdfUrl: confirmedAd.pdfUrl,
+//               videoUrl: confirmedAd.videoUrl,
+//               businessName: confirmedAd.businessName,
+//               adDescription: confirmedAd.adDescription
+//             }
+//           }
+//         },
+//         { new: true }
+//       );
+//     });
+
+//     await Promise.all(spaceUpdates);
+
+//     // Notify that the ad is now live
+//     confirmedAd.selectedSpaces.forEach(space => {
+//       console.log(`Ad is now live on space ID: ${space._id}`);
+//     });
+
+//     res.status(200).json({ 
+//       message: 'Ad confirmed and now live on selected spaces',
+//       ad: confirmedAd
+//     });
+
+//   } catch (error) {
+//     console.error('Error confirming ad display:', error);
+//     res.status(500).json({ message: 'Internal Server Error' });
+//   }
+// };
+
 exports.confirmAdDisplay = async (req, res) => {
   try {
     const { adId } = req.params;
 
-    // First, find and update the ad's confirmation status
+    // Update the ad's confirmation status
     const confirmedAd = await ImportAd.findByIdAndUpdate(
       adId,
-      { confirmed: true },
+      { 
+        confirmed: true,
+        $set: { 
+          confirmationDate: new Date() 
+        }
+      },
       { new: true }
-    ).populate('selectedSpaces');
+    );
 
     if (!confirmedAd) {
       return res.status(404).json({ message: 'Ad not found' });
     }
 
-    // Now that the ad is confirmed, update all selected ad spaces to include this ad
-    const spaceUpdates = confirmedAd.selectedSpaces.map(async (spaceId) => {
-      return AdSpace.findByIdAndUpdate(
-        spaceId,
-        { 
-          $push: { 
-            activeAds: {
-              adId: confirmedAd._id,
-              imageUrl: confirmedAd.imageUrl,
-              pdfUrl: confirmedAd.pdfUrl,
-              videoUrl: confirmedAd.videoUrl,
-              businessName: confirmedAd.businessName,
-              adDescription: confirmedAd.adDescription
-            }
-          }
-        },
-        { new: true }
-      );
-    });
-
-    await Promise.all(spaceUpdates);
-
-    // Notify that the ad is now live
-    confirmedAd.selectedSpaces.forEach(space => {
-      console.log(`Ad is now live on space ID: ${space._id}`);
-    });
+    // Update all selected spaces to include this ad
+    await AdSpace.updateMany(
+      { _id: { $in: confirmedAd.selectedSpaces } },
+      { 
+        $addToSet: { 
+          selectedAds: confirmedAd._id 
+        }
+      }
+    );
 
     res.status(200).json({ 
       message: 'Ad confirmed and now live on selected spaces',
