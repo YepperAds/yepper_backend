@@ -22,4 +22,3 @@ router.get('/all', pictureController.getAllPictures);
 router.get('/earnings/:creatorId', pictureController.getEarnings);
 
 module.exports = router;
- 

@@ -28,7 +28,7 @@ const corsOptions = {
   origin: function(origin, callback) {
     // Allow requests from null origin (local files), localhost:3000, and your production domain
     const allowedOrigins = [
-      'https://www.yepper.cc',
+      'http://localhost:3000',
       'null',
       'file://',
       process.env.CLIENT_URL
@@ -67,7 +67,7 @@ app.use('/api/payout', payoutRoutes);
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'https://www.yepper.cc',
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST'],
     credentials: true
   }
