@@ -4,19 +4,18 @@ const ImportAd = require('../models/ImportAdModel');
 
 exports.displayAd = async (req, res) => {
   try {
-    // Set CORS headers
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     
-    const { space, website, category, callback } = req.query;
+    const { spaceId, website, category, callback } = req.query;
     
-    // Validate input
-    if (!space) {
+    if (!spaceId) {
       return res.status(400).send('Space ID is required');
     }
 
-    const adSpace = await AdSpace.findById(space).populate({
+    // Find by webOwnerId instead of _id
+    const adSpace = await AdSpace.findOne({ webOwnerId: spaceId }).populate({
       path: 'selectedAds',
       match: { approved: true, confirmed: true }
     });
@@ -28,7 +27,6 @@ exports.displayAd = async (req, res) => {
     const currentDate = new Date();
     const { startDate, endDate, availability } = adSpace;
     
-    // Check date availability
     if (
       (availability === 'Reserved for future date' || availability === 'Pick a date') &&
       (currentDate < new Date(startDate) || currentDate > new Date(endDate))
@@ -41,7 +39,7 @@ exports.displayAd = async (req, res) => {
 
     const adsHtml = adsToShow
       .map((selectedAd) => {
-        const imageUrl = selectedAd.imageUrl ? `https://yepper-backend.onrender.com${selectedAd.imageUrl}` : '';
+        const imageUrl = selectedAd.imageUrl ? `http://localhost:5000${selectedAd.imageUrl}` : '';
         const targetUrl = selectedAd.businessLink.startsWith('http') ? 
           selectedAd.businessLink : `https://${selectedAd.businessLink}`;
         return `
@@ -56,7 +54,6 @@ exports.displayAd = async (req, res) => {
       })
       .join('');
 
-    // Send response based on callback presence
     if (callback) {
       res.set('Content-Type', 'application/javascript');
       return res.send(`${callback}(${JSON.stringify({ html: adsHtml })})`);
@@ -70,7 +67,6 @@ exports.displayAd = async (req, res) => {
   }
 };
 
-// Update increment endpoints to use proper error handling
 exports.incrementView = async (req, res) => {
   try {
     const { adId } = req.body;
