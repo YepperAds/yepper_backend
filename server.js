@@ -28,7 +28,7 @@ const corsOptions = {
   origin: function(origin, callback) {
     // Allow requests from null origin (local files), localhost:3000, and your production domain
     const allowedOrigins = [
-      'https://www.yepper.cc/',
+      'https://www.yepper.cc',
       'null',
       'file://',
       process.env.CLIENT_URL
