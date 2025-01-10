@@ -39,7 +39,7 @@ exports.displayAd = async (req, res) => {
 
     const adsHtml = adsToShow
       .map((selectedAd) => {
-        const imageUrl = selectedAd.imageUrl ? `http://localhost:5000${selectedAd.imageUrl}` : '';
+        const imageUrl = selectedAd.imageUrl ? `https://yepper-backend.onrender.com${selectedAd.imageUrl}` : '';
         const targetUrl = selectedAd.businessLink.startsWith('http') ? 
           selectedAd.businessLink : `https://${selectedAd.businessLink}`;
         return `

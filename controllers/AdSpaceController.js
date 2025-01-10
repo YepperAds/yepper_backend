@@ -16,7 +16,7 @@ const generateSecureScript = (spaceId, websiteId, categoryId, startDate = null, 
             _i="${spaceId}",
             _w="${websiteId}",
             _c="${categoryId}",
-            _b="http://localhost:5000",
+            _b="https://yepper-backend.onrender.com",
             _t=5000;
       ${startDate && endDate ? `
         const _s=new Date("${startDate}"),
