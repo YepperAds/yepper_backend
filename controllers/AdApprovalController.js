@@ -12,6 +12,32 @@ const Withdrawal = require('../models/WithdrawalModel');
 
 const flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
+// exports.getPendingAds = async (req, res) => {
+//   try {
+//     const { ownerId } = req.params;  // Owner's ID from params
+
+//     // Fetch the owner's websites, categories, and ad spaces
+//     const websites = await Website.find({ ownerId });
+//     const websiteIds = websites.map(website => website._id);
+
+//     const categories = await AdCategory.find({ websiteId: { $in: websiteIds } });
+//     const categoryIds = categories.map(category => category._id);
+
+//     const adSpaces = await AdSpace.find({ categoryId: { $in: categoryIds } });
+//     const adSpaceIds = adSpaces.map(space => space._id);
+
+//     // Fetch pending ads that belong to the owner's ad spaces
+//     const pendingAds = await ImportAd.find({
+//       approved: false,
+//       selectedSpaces: { $in: adSpaceIds }
+//     }).populate('selectedSpaces selectedCategories selectedWebsites');
+
+//     res.status(200).json(pendingAds);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Error fetching pending ads' });
+//   }
+// };
+
 exports.getPendingAds = async (req, res) => {
   try {
     const { ownerId } = req.params;  // Owner's ID from params
@@ -23,14 +49,14 @@ exports.getPendingAds = async (req, res) => {
     const categories = await AdCategory.find({ websiteId: { $in: websiteIds } });
     const categoryIds = categories.map(category => category._id);
 
-    const adSpaces = await AdSpace.find({ categoryId: { $in: categoryIds } });
-    const adSpaceIds = adSpaces.map(space => space._id);
+    // const adSpaces = await AdSpace.find({ categoryId: { $in: categoryIds } });
+    // const adSpaceIds = adSpaces.map(space => space._id);
 
     // Fetch pending ads that belong to the owner's ad spaces
     const pendingAds = await ImportAd.find({
       approved: false,
-      selectedSpaces: { $in: adSpaceIds }
-    }).populate('selectedSpaces selectedCategories selectedWebsites');
+      selectedCategories: { $in: categoryIds }
+    }).populate('selectedCategories selectedWebsites');
 
     res.status(200).json(pendingAds);
   } catch (error) {
@@ -54,23 +80,24 @@ exports.getUserMixedAds = async (req, res) => {
         path: 'selectedCategories',
         select: 'price ownerId',
       })
-      .populate({
-        path: 'selectedSpaces',
-        select: 'price webOwnerEmail',
-      })
+      // .populate({
+      //   path: 'selectedSpaces',
+      //   select: 'price webOwnerEmail',
+      // })
       .populate('selectedWebsites', 'websiteName websiteLink logoUrl');
 
     const adsWithDetails = mixedAds.map(ad => {
       const categoryPriceSum = ad.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
-      const spacePriceSum = ad.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
-      const totalPrice = categoryPriceSum + spacePriceSum;
+      // const spacePriceSum = ad.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
+      const totalPrice = categoryPriceSum;
+      // const totalPrice = categoryPriceSum + spacePriceSum;
 
       return {
         ...ad.toObject(),
         totalPrice,
         isConfirmed: ad.confirmed,
         categoryOwnerIds: ad.selectedCategories.map(cat => cat.ownerId),
-        spaceOwnerEmails: ad.selectedSpaces.map(space => space.webOwnerEmail),
+        // spaceOwnerEmails: ad.selectedSpaces.map(space => space.webOwnerEmail),
         clicks: ad.clicks,
         views: ad.views,
         status: ad.approved ? 'approved' : 'pending'
@@ -90,7 +117,8 @@ exports.getPendingAdById = async (req, res) => {
     console.log('Fetching ad with ID:', adId); // Debugging log
 
     const ad = await ImportAd.findById(adId)
-      .populate('selectedSpaces selectedCategories selectedWebsites');
+      // .populate('selectedSpaces selectedCategories selectedWebsites');
+      .populate('selectedCategories selectedWebsites');
 
     if (!ad) {
       console.log('Ad not found for ID:', adId); // Log when ad is missing
@@ -242,6 +270,40 @@ exports.approveAd = async (req, res) => {
 //   }
 // };
 
+// exports.getAdDetails = async (req, res) => {
+//   const { adId } = req.params;
+
+//   try {
+//     const approvedAd = await ImportAd.findById(adId)
+//       .populate('selectedWebsites', 'websiteName websiteLink')
+//       .populate('selectedCategories', 'categoryName price ownerId')
+//       .populate('selectedSpaces', 'spaceType price webOwnerEmail');
+
+//     if (!approvedAd) {
+//       return res.status(404).json({ message: 'Ad not found' });
+//     }
+
+//     const categoryPriceSum = approvedAd.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
+//     const spacePriceSum = approvedAd.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
+//     const totalPrice = categoryPriceSum + spacePriceSum;
+
+//     const adDetails = {
+//       ...approvedAd.toObject(),
+//       totalPrice,
+//       isConfirmed: approvedAd.confirmed,
+//       categoryOwnerIds: approvedAd.selectedCategories.map((cat) => cat.ownerId),
+//       spaceOwnerEmails: approvedAd.selectedSpaces.map((space) => space.webOwnerEmail),
+//       clicks: approvedAd.clicks,  // Include clicks
+//       views: approvedAd.views,   // Include views
+//     };
+
+//     res.status(200).json(adDetails);
+//   } catch (error) {
+//     console.error('Error fetching ad details:', error);
+//     res.status(500).json({ message: 'Failed to fetch ad details', error });
+//   }
+// };
+
 exports.getAdDetails = async (req, res) => {
   const { adId } = req.params;
 
@@ -249,22 +311,23 @@ exports.getAdDetails = async (req, res) => {
     const approvedAd = await ImportAd.findById(adId)
       .populate('selectedWebsites', 'websiteName websiteLink')
       .populate('selectedCategories', 'categoryName price ownerId')
-      .populate('selectedSpaces', 'spaceType price webOwnerEmail');
+      // .populate('selectedSpaces', 'spaceType price webOwnerEmail');
 
     if (!approvedAd) {
       return res.status(404).json({ message: 'Ad not found' });
     }
 
     const categoryPriceSum = approvedAd.selectedCategories.reduce((sum, category) => sum + (category.price || 0), 0);
-    const spacePriceSum = approvedAd.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
-    const totalPrice = categoryPriceSum + spacePriceSum;
+    // const spacePriceSum = approvedAd.selectedSpaces.reduce((sum, space) => sum + (space.price || 0), 0);
+    // const totalPrice = categoryPriceSum + spacePriceSum;
+    const totalPrice = categoryPriceSum;
 
     const adDetails = {
       ...approvedAd.toObject(),
       totalPrice,
       isConfirmed: approvedAd.confirmed,
       categoryOwnerIds: approvedAd.selectedCategories.map((cat) => cat.ownerId),
-      spaceOwnerEmails: approvedAd.selectedSpaces.map((space) => space.webOwnerEmail),
+      // spaceOwnerEmails: approvedAd.selectedSpaces.map((space) => space.webOwnerEmail),
       clicks: approvedAd.clicks,  // Include clicks
       views: approvedAd.views,   // Include views
     };
@@ -273,6 +336,43 @@ exports.getAdDetails = async (req, res) => {
   } catch (error) {
     console.error('Error fetching ad details:', error);
     res.status(500).json({ message: 'Failed to fetch ad details', error });
+  }
+};
+
+exports.getApprovedAds = async (req, res) => {
+  try {
+    const approvedAds = await ImportAd.find({ approved: true })
+      .populate('selectedSpaces selectedWebsites selectedCategories');
+
+    res.status(200).json(approvedAds);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching approved ads' });
+  }
+};
+
+exports.getApprovedAdsByUser = async (req, res) => {
+  try {
+    const { ownerId } = req.params;  // Owner's ID from params
+
+    // Fetch the owner's websites, categories, and ad spaces
+    const websites = await Website.find({ ownerId });
+    const websiteIds = websites.map(website => website._id);
+
+    const categories = await AdCategory.find({ websiteId: { $in: websiteIds } });
+    const categoryIds = categories.map(category => category._id);
+
+    const adSpaces = await AdSpace.find({ categoryId: { $in: categoryIds } });
+    const adSpaceIds = adSpaces.map(space => space._id);
+
+    // Fetch approved ads that belong to the owner's ad spaces
+    const approvedAds = await ImportAd.find({
+      approved: true,
+      selectedSpaces: { $in: adSpaceIds }
+    }).populate('selectedSpaces selectedCategories selectedWebsites');
+
+    res.status(200).json(approvedAds);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching approved ads' });
   }
 };
 
@@ -350,8 +450,9 @@ exports.confirmAdDisplay = async (req, res) => {
     }
 
     // Update all selected spaces to include this ad
-    await AdSpace.updateMany(
-      { _id: { $in: confirmedAd.selectedSpaces } },
+    await AdCategory.updateMany(
+      // { _id: { $in: confirmedAd.selectedSpaces } },
+      { _id: { $in: confirmedAd.selectedCategories } },
       { 
         $addToSet: { 
           selectedAds: confirmedAd._id 
@@ -679,43 +780,6 @@ exports.getOwnerPayments = async (req, res) => {
       message: 'Error fetching payments',
       error: error.message,
     });
-  }
-};
-
-exports.getApprovedAds = async (req, res) => {
-  try {
-    const approvedAds = await ImportAd.find({ approved: true })
-      .populate('selectedSpaces selectedWebsites selectedCategories');
-
-    res.status(200).json(approvedAds);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching approved ads' });
-  }
-};
-
-exports.getApprovedAdsByUser = async (req, res) => {
-  try {
-    const { ownerId } = req.params;  // Owner's ID from params
-
-    // Fetch the owner's websites, categories, and ad spaces
-    const websites = await Website.find({ ownerId });
-    const websiteIds = websites.map(website => website._id);
-
-    const categories = await AdCategory.find({ websiteId: { $in: websiteIds } });
-    const categoryIds = categories.map(category => category._id);
-
-    const adSpaces = await AdSpace.find({ categoryId: { $in: categoryIds } });
-    const adSpaceIds = adSpaces.map(space => space._id);
-
-    // Fetch approved ads that belong to the owner's ad spaces
-    const approvedAds = await ImportAd.find({
-      approved: true,
-      selectedSpaces: { $in: adSpaceIds }
-    }).populate('selectedSpaces selectedCategories selectedWebsites');
-
-    res.status(200).json(approvedAds);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching approved ads' });
   }
 };
 

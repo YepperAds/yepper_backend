@@ -25,12 +25,12 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       adDescription,
       selectedWebsites,
       selectedCategories,
-      selectedSpaces,
+      // selectedSpaces,
     } = req.body;
 
     const websitesArray = JSON.parse(selectedWebsites);
     const categoriesArray = JSON.parse(selectedCategories);
-    const spacesArray = JSON.parse(selectedSpaces);
+    // const spacesArray = JSON.parse(selectedSpaces);
 
     let imageUrl = '';
     let videoUrl = '';
@@ -84,7 +84,7 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       adDescription,
       selectedWebsites: websitesArray,
       selectedCategories: categoriesArray,
-      selectedSpaces: spacesArray,
+      // selectedSpaces: spacesArray,
     });
 
     const savedRequestAd = await newRequestAd.save();

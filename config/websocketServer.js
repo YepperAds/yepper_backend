@@ -1,6 +1,6 @@
 // websocketServer.js
 const ImportAd = require('../models/ImportAdModel');
-const AdSpace = require('../models/AdSpaceModel');
+const AdCategory = require('../models/AdCategoryModel');
 
 function setupWebSocketServer(server, io) {
   const clients = new Map();
@@ -33,12 +33,12 @@ function setupWebSocketServer(server, io) {
         console.log('New ad inserted:', newAd._id);
         
         // Notify website owners
-        for (const spaceId of newAd.selectedSpaces) {
-          const adSpace = await AdSpace.findById(spaceId).populate('webOwnerId');
-          if (adSpace && adSpace.webOwnerId) {
-            const socket = clients.get(adSpace.webOwnerId.toString());
+        for (const categoryId of newAd.selectedCategories) {
+          const adCategory = await AdCategory.findById(categoryId).populate('ownerId');
+          if (adCategory && adCategory.ownerId) {
+            const socket = clients.get(adCategory.ownerId.toString());
             if (socket) {
-              console.log('Sending notification to owner:', adSpace.webOwnerId);
+              console.log('Sending notification to owner:', adCategory.ownerId);
               socket.emit('notification', {
                 type: 'newPendingAd',
                 businessName: newAd.businessName,
