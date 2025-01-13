@@ -1,4 +1,5 @@
 // AdApprovalController.js
+const mongoose = require('mongoose');
 const sendEmailNotification = require('./emailService');
 const Flutterwave = require('flutterwave-node-v3');
 const axios = require('axios');
@@ -501,103 +502,360 @@ exports.confirmWebsiteAd = async (req, res) => {
   }
 };
 
+// exports.initiateAdPayment = async (req, res) => {
+//   try {
+//     const { adId, amount, email, phoneNumber, userId } = req.body;
+
+//     if (!userId || userId.trim() === '') {
+//       return res.status(400).json({ message: 'Invalid request: User ID is required.' });
+//     }
+
+//     const ad = await ImportAd.findById(adId).populate('selectedSpaces');
+//     if (!ad || !ad.selectedSpaces || ad.selectedSpaces.length === 0) {
+//       return res.status(404).json({ message: 'Ad or selected spaces not found' });
+//     }
+
+//     // Get the web owner ID from the first selected space
+//     const webOwnerId = ad.selectedSpaces[0].webOwnerId;
+//     if (!webOwnerId) {
+//       return res.status(404).json({ message: 'Web owner ID not found for selected spaces.' });
+//     }
+
+//     const tx_ref = `CARDPAY-${Date.now()}`;
+
+//     const payment = new Payment({
+//       tx_ref,
+//       amount,
+//       currency: 'RWF',
+//       email,
+//       phoneNumber,
+//       userId,
+//       adId,
+//       webOwnerId, // Store the web owner ID in the payment
+//       status: 'pending',
+//     });
+
+//     await payment.save();
+
+//     const paymentPayload = {
+//       tx_ref,
+//       amount,
+//       currency: 'RWF',
+//       redirect_url: 'https://yepper-backend.onrender.com/api/accept/callback',
+//       customer: { email, phonenumber: phoneNumber },
+//       payment_options: 'card',
+//       customizations: {
+//         title: 'Ad Payment',
+//         description: 'Payment for ad display',
+//       },
+//     };
+
+//     const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
+//       headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
+//     });
+
+//     if (response.data?.data?.link) {
+//       res.status(200).json({ paymentLink: response.data.data.link });
+//     } else {
+//       res.status(500).json({ message: 'Payment initiation failed.' });
+//     }
+//   } catch (error) {
+//     console.error('Error initiating payment:', error);
+//     res.status(500).json({ message: 'Error initiating payment.', error });
+//   }
+// };
+
+// AdApprovalController.js
 exports.initiateAdPayment = async (req, res) => {
   try {
-    const { adId, amount, email, phoneNumber, userId } = req.body;
+    const { adId, websiteId, amount, email, phoneNumber, userId } = req.body;
 
-    if (!userId || userId.trim() === '') {
-      return res.status(400).json({ message: 'Invalid request: User ID is required.' });
+    // Input validation
+    if (!adId || !websiteId || !amount || !email || !userId) {
+      return res.status(400).json({ 
+        message: 'Missing required fields', 
+        required: ['adId', 'websiteId', 'amount', 'email', 'userId'] 
+      });
     }
 
-    const ad = await ImportAd.findById(adId).populate('selectedSpaces');
-    if (!ad || !ad.selectedSpaces || ad.selectedSpaces.length === 0) {
-      return res.status(404).json({ message: 'Ad or selected spaces not found' });
+    // Check if the ad is already confirmed for this website
+    const existingAd = await ImportAd.findOne({
+      _id: adId,
+      'websiteSelections': {
+        $elemMatch: {
+          websiteId: websiteId,
+          confirmed: true
+        }
+      }
+    });
+
+    if (existingAd) {
+      return res.status(400).json({ message: 'Ad is already confirmed for this website' });
     }
 
-    // Get the web owner ID from the first selected space
-    const webOwnerId = ad.selectedSpaces[0].webOwnerId;
-    if (!webOwnerId) {
-      return res.status(404).json({ message: 'Web owner ID not found for selected spaces.' });
+    // Find ad and verify it's approved but not confirmed
+    const ad = await ImportAd.findOne({
+      _id: adId,
+      'websiteSelections': {
+        $elemMatch: {
+          websiteId: websiteId,
+          approved: true,
+          confirmed: { $ne: true }
+        }
+      }
+    });
+
+    if (!ad) {
+      return res.status(404).json({ message: 'Ad not found or not approved for this website' });
     }
 
-    const tx_ref = `CARDPAY-${Date.now()}`;
+    // Get website selection and verify categories
+    const websiteSelection = ad.websiteSelections.find(
+      selection => selection.websiteId.toString() === websiteId.toString()
+    );
 
+    if (!websiteSelection || !websiteSelection.categories?.length) {
+      return res.status(400).json({ message: 'Invalid website selection or no categories selected' });
+    }
+
+    // Verify categories exist
+    const categories = await AdCategory.find({
+      _id: { $in: websiteSelection.categories },
+      websiteId: websiteId
+    });
+
+    if (!categories.length) {
+      return res.status(404).json({ message: 'Categories not found for this website' });
+    }
+
+    const tx_ref = `AD-${Date.now()}-${adId}-${websiteId}`;
+
+    // Format phone number to remove any spaces or special characters
+    const formattedPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
+
+    // Create payment record first
     const payment = new Payment({
       tx_ref,
-      amount,
+      amount: Number(amount),
       currency: 'RWF',
       email,
-      phoneNumber,
+      phoneNumber: formattedPhone,
       userId,
       adId,
-      webOwnerId, // Store the web owner ID in the payment
-      status: 'pending',
+      websiteId,
+      webOwnerId: categories[0].ownerId,
+      status: 'pending'
     });
 
     await payment.save();
 
+    // Construct Flutterwave payment payload
     const paymentPayload = {
       tx_ref,
-      amount,
+      amount: Number(amount),
       currency: 'RWF',
-      redirect_url: 'https://yepper-backend.onrender.com/api/accept/callback',
-      customer: { email, phonenumber: phoneNumber },
-      payment_options: 'card',
-      customizations: {
-        title: 'Ad Payment',
-        description: 'Payment for ad display',
+      redirect_url: "http://localhost:5000/api/accept/callback",
+      meta: {
+        adId,
+        websiteId,
+        userId
       },
+      customer: {
+        email,
+        phonenumber: formattedPhone,
+        name: ad.businessName || email // Use business name or email as customer name
+      },
+      customizations: {
+        title: 'Ad Space Payment',
+        description: `Payment for ad space on website - ${ad.businessName}`,
+        logo: process.env.COMPANY_LOGO_URL || '' // Optional company logo
+      }
     };
 
-    const response = await axios.post('https://api.flutterwave.com/v3/payments', paymentPayload, {
-      headers: { Authorization: `Bearer ${process.env.FLW_SECRET_KEY}` },
-    });
+    console.log('Flutterwave payment payload:', JSON.stringify(paymentPayload, null, 2));
 
-    if (response.data?.data?.link) {
-      res.status(200).json({ paymentLink: response.data.data.link });
+    // Make request to Flutterwave
+    const response = await axios.post(
+      'https://api.flutterwave.com/v3/payments', 
+      paymentPayload, 
+      {
+        headers: { 
+          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (response.data?.status === 'success' && response.data?.data?.link) {
+      res.status(200).json({ 
+        paymentLink: response.data.data.link,
+        tx_ref
+      });
     } else {
-      res.status(500).json({ message: 'Payment initiation failed.' });
+      // If Flutterwave returns success but no payment link
+      throw new Error('Invalid payment response from Flutterwave');
     }
   } catch (error) {
-    console.error('Error initiating payment:', error);
-    res.status(500).json({ message: 'Error initiating payment.', error });
+    console.error('Error initiating payment:', error.response?.data || error.message);
+    
+    // Delete the payment record if Flutterwave request failed
+    if (error.response?.status === 400) {
+      try {
+        await Payment.findOneAndDelete({ tx_ref });
+      } catch (deleteError) {
+        console.error('Error deleting failed payment record:', deleteError);
+      }
+    }
+
+    res.status(500).json({ 
+      message: 'Error initiating payment',
+      error: error.response?.data?.message || error.message
+    });
   }
 };
 
-// exports.adPaymentCallback = async (req, res) => {
-//   try {
-//     const { tx_ref, transaction_id } = req.query;
+exports.adPaymentCallback = async (req, res) => {
+  const session = await mongoose.startSession();
+  let transactionStarted = false;
 
-//     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
-//       headers: {
-//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
-//       }
-//     });
+  try {
+    const { tx_ref, transaction_id } = req.query;
+    if (!tx_ref || !transaction_id) {
+      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=invalid-params`);
+    }
 
-//     const { status } = transactionVerification.data.data;
+    // Parse adId and websiteId from tx_ref
+    const [prefix, timestamp, adId, websiteId] = tx_ref.split('-');
+    if (!adId || !websiteId) {
+      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=invalid-txref`);
+    }
 
-//     if (status === 'successful') {
-//       const payment = await Payment.findOneAndUpdate(
-//         { tx_ref },
-//         { status: 'successful' },
-//         { new: true }
-//       );
+    // Verify the transaction with Flutterwave
+    const transactionVerification = await axios.get(
+      `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        },
+      }
+    );
 
-//       if (payment) {
-//         // Confirm the related ad
-//         await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
+    const { status, amount, currency } = transactionVerification.data.data;
 
-//         return res.redirect('https://yepper.vercel.app/dashboard'); // Redirect user after successful payment
-//       }
-//     } else {
-//       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-//       return res.redirect('https://yepper.vercel.app');
-//     }
-//   } catch (error) {
-//     console.error('Error in payment callback:', error);
-//     res.status(500).send('Error verifying payment');
-//   }
-// };
+    // Find the payment record
+    const payment = await Payment.findOne({ tx_ref });
+
+    if (!payment) {
+      console.error('Payment record not found for tx_ref:', tx_ref);
+      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=payment-not-found`);
+    }
+
+    // Double-check the ad hasn't been confirmed in the meantime
+    const existingConfirmedAd = await ImportAd.findOne({
+      _id: adId,
+      'websiteSelections': {
+        $elemMatch: {
+          websiteId: websiteId,
+          confirmed: true
+        }
+      }
+    });
+
+    if (existingConfirmedAd) {
+      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=already-confirmed`);
+    }
+
+    // Verify payment amount and currency
+    if (payment.amount !== amount || payment.currency !== currency) {
+      console.error('Payment amount or currency mismatch');
+      payment.status = 'failed';
+      await payment.save();
+      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=amount-mismatch`);
+    }
+
+    // Update payment status based on verification
+    payment.status = status === 'successful' ? 'successful' : 'failed';
+    await payment.save();
+
+    if (status === 'successful') {
+      // Start transaction
+      await session.startTransaction();
+      transactionStarted = true;
+
+      // Find and update the ad in one atomic operation
+      const updatedAd = await ImportAd.findOneAndUpdate(
+        { 
+          _id: adId,
+          'websiteSelections': {
+            $elemMatch: {
+              websiteId: websiteId,
+              approved: true,
+              confirmed: { $ne: true }
+            }
+          }
+        },
+        { 
+          $set: { 
+            'websiteSelections.$.confirmed': true,
+            'websiteSelections.$.confirmedAt': new Date()
+          }
+        },
+        { 
+          new: true,
+          session 
+        }
+      );
+
+      if (!updatedAd) {
+        throw new Error('Failed to update ad confirmation status');
+      }
+
+      // Update categories and web owner balance
+      const websiteSelection = updatedAd.websiteSelections.find(
+        sel => sel.websiteId.toString() === websiteId.toString()
+      );
+
+      if (websiteSelection?.categories?.length > 0) {
+        // Update ad categories
+        await AdCategory.updateMany(
+          { 
+            _id: { $in: websiteSelection.categories },
+            websiteId: websiteId
+          },
+          { $addToSet: { selectedAds: updatedAd._id } },
+          { session }
+        );
+
+        // Update web owner's balance
+        await WebOwnerBalance.findOneAndUpdate(
+          { userId: payment.webOwnerId },
+          {
+            $inc: {
+              totalEarnings: payment.amount,
+              availableBalance: payment.amount
+            }
+          },
+          { upsert: true, session }
+        );
+      }
+
+      await session.commitTransaction();
+      transactionStarted = false;
+      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=success`);
+    } else {
+      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=failed`);
+    }
+  } catch (error) {
+    console.error('Error handling payment callback:', error.response?.data || error.message);
+    if (transactionStarted) {
+      await session.abortTransaction();
+    }
+    return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=error`);
+  } finally {
+    await session.endSession();
+  }
+};
 
 exports.updateWebOwnerBalance = async (req, res) => {
   try {
@@ -620,56 +878,56 @@ exports.updateWebOwnerBalance = async (req, res) => {
   }
 };
 
-exports.adPaymentCallback = async (req, res) => {
-  try {
-    const { tx_ref, transaction_id } = req.query;
+// exports.adPaymentCallback = async (req, res) => {
+//   try {
+//     const { tx_ref, transaction_id } = req.query;
 
-    // Verify the transaction with Flutterwave
-    const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
-      headers: {
-        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-      },
-    });
+//     // Verify the transaction with Flutterwave
+//     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
+//       headers: {
+//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+//       },
+//     });
 
-    const { status, customer } = transactionVerification.data.data;
+//     const { status, customer } = transactionVerification.data.data;
 
-    if (status === 'successful') {
-      const payment = await Payment.findOne({ tx_ref });
+//     if (status === 'successful') {
+//       const payment = await Payment.findOne({ tx_ref });
 
-      if (payment) {
-        // Update payment status
-        payment.status = 'successful';
-        await payment.save();
+//       if (payment) {
+//         // Update payment status
+//         payment.status = 'successful';
+//         await payment.save();
 
-        // Confirm the related ad
-        await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
+//         // Confirm the related ad
+//         await ImportAd.findByIdAndUpdate(payment.adId, { confirmed: true });
 
-        // Update the web owner's balance
-        await WebOwnerBalance.findOneAndUpdate(
-          { userId: payment.webOwnerId },
-          {
-            $inc: {
-              totalEarnings: payment.amount,
-              availableBalance: payment.amount,
-            }
-          },
-          { 
-            upsert: true,
-            setDefaultsOnInsert: true 
-          }
-        );
+//         // Update the web owner's balance
+//         await WebOwnerBalance.findOneAndUpdate(
+//           { userId: payment.webOwnerId },
+//           {
+//             $inc: {
+//               totalEarnings: payment.amount,
+//               availableBalance: payment.amount,
+//             }
+//           },
+//           { 
+//             upsert: true,
+//             setDefaultsOnInsert: true 
+//           }
+//         );
 
-        return res.redirect('http://localhost:3000/approved-ads');
-      }
-    } else {
-      await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-      return res.redirect('http://localhost:3000');
-    }
-  } catch (error) {
-    console.error('Error handling payment callback:', error);
-    res.status(500).json({ message: 'Error handling payment callback.', error });
-  }
-};
+//         return res.redirect('http://localhost:3000/approved-ads');
+//       }
+//     } else {
+//       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
+//       return res.redirect('http://localhost:3000');
+//     }
+//   } catch (error) {
+//     console.error('Error handling payment callback:', error);
+//     res.status(500).json({ message: 'Error handling payment callback.', error });
+//   }
+// };
 
 exports.getWebOwnerBalance = async (req, res) => {
   try {
