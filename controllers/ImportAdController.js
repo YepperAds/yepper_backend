@@ -1,5 +1,101 @@
+// const ImportAd = require('../models/ImportAdModel');
+// const multer = require('multer');
+// const path = require('path');
+// const bucket = require('../config/storage');
+
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   fileFilter: (req, file, cb) => {
+//     const allowedTypes = /jpeg|jpg|png|gif|bmp|webp|tiff|svg|mp4|avi|mov|mkv|webm|pdf/;
+//     const isValid = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+//     if (isValid) return cb(null, true);
+//     cb(new Error('Invalid file type.'));
+//   },
+// });
+
+// exports.createImportAd = [upload.single('file'), async (req, res) => {
+//   try {
+//     const {
+//       userId,
+//       adOwnerEmail,
+//       businessName,
+//       businessLink,
+//       businessLocation,
+//       adDescription,
+//       selectedWebsites,
+//       selectedCategories,
+//       // selectedSpaces,
+//     } = req.body;
+
+//     const websitesArray = JSON.parse(selectedWebsites);
+//     const categoriesArray = JSON.parse(selectedCategories);
+//     // const spacesArray = JSON.parse(selectedSpaces);
+
+//     let imageUrl = '';
+//     let videoUrl = '';
+
+//     // Upload file to GCS if provided
+//     if (req.file) {
+//       const blob = bucket.file(`${Date.now()}-${req.file.originalname}`);
+//       const blobStream = blob.createWriteStream({
+//         resumable: false,
+//         contentType: req.file.mimetype,
+//       });
+
+//       await new Promise((resolve, reject) => {
+//         blobStream.on('error', (err) => {
+//           console.error('Upload error:', err);
+//           reject(new Error('Failed to upload file.'));
+//         });
+
+//         blobStream.on('finish', async () => {
+//           try {
+//             console.log('File upload finished, attempting to make public...');
+//             await blob.makePublic();
+//             console.log('File made public successfully');
+//             const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+//             if (req.file.mimetype.startsWith('image')) {
+//               imageUrl = publicUrl;
+//             } else if (req.file.mimetype.startsWith('video')) {
+//               videoUrl = publicUrl;
+//             }
+//             resolve();
+//           } catch (err) {
+//             console.error('Error making file public:', err.message);
+//             reject(new Error('Failed to make file public.'));
+//           }
+//         });
+        
+
+//         blobStream.end(req.file.buffer);
+//       });
+//     }
+
+//     // Create new ad entry
+//     const newRequestAd = new ImportAd({
+//       userId,
+//       adOwnerEmail,
+//       imageUrl,
+//       videoUrl,
+//       businessName,
+//       businessLink,
+//       businessLocation,
+//       adDescription,
+//       selectedWebsites: websitesArray,
+//       selectedCategories: categoriesArray,
+//       // selectedSpaces: spacesArray,
+//     });
+
+//     const savedRequestAd = await newRequestAd.save();
+//     res.status(201).json(savedRequestAd);
+//   } catch (err) {
+//     console.error('Error creating ad:', err);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// }];
+
 const ImportAd = require('../models/ImportAdModel');
-const AdSpace = require('../models/AdSpaceModel');
+const AdCategory = require('../models/AdCategoryModel');
 const multer = require('multer');
 const path = require('path');
 const bucket = require('../config/storage');
@@ -25,17 +121,16 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
       adDescription,
       selectedWebsites,
       selectedCategories,
-      // selectedSpaces,
     } = req.body;
 
     const websitesArray = JSON.parse(selectedWebsites);
     const categoriesArray = JSON.parse(selectedCategories);
-    // const spacesArray = JSON.parse(selectedSpaces);
 
     let imageUrl = '';
     let videoUrl = '';
+    let pdfUrl = '';
 
-    // Upload file to GCS if provided
+    // Handle file upload
     if (req.file) {
       const blob = bucket.file(`${Date.now()}-${req.file.originalname}`);
       const blobStream = blob.createWriteStream({
@@ -51,47 +146,99 @@ exports.createImportAd = [upload.single('file'), async (req, res) => {
 
         blobStream.on('finish', async () => {
           try {
-            console.log('File upload finished, attempting to make public...');
             await blob.makePublic();
-            console.log('File made public successfully');
             const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+            
             if (req.file.mimetype.startsWith('image')) {
               imageUrl = publicUrl;
             } else if (req.file.mimetype.startsWith('video')) {
               videoUrl = publicUrl;
+            } else if (req.file.mimetype === 'application/pdf') {
+              pdfUrl = publicUrl;
             }
             resolve();
           } catch (err) {
-            console.error('Error making file public:', err.message);
+            console.error('Error making file public:', err);
             reject(new Error('Failed to make file public.'));
           }
         });
-        
 
         blobStream.end(req.file.buffer);
       });
     }
 
-    // Create new ad entry
+    // Fetch all selected categories to validate website associations
+    const categories = await AdCategory.find({
+      _id: { $in: categoriesArray }
+    });
+
+    // Create a map of websiteId to its categories for efficient lookup
+    const websiteCategoryMap = categories.reduce((map, category) => {
+      const websiteId = category.websiteId.toString();
+      if (!map.has(websiteId)) {
+        map.set(websiteId, []);
+      }
+      map.get(websiteId).push(category._id);
+      return map;
+    }, new Map());
+
+    // Create websiteSelections array with proper category associations
+    const websiteSelections = websitesArray.map(websiteId => {
+      // Get categories that belong to this website
+      const websiteCategories = websiteCategoryMap.get(websiteId.toString()) || [];
+      
+      // Filter selected categories to only include ones that belong to this website
+      const validCategories = categoriesArray.filter(categoryId => 
+        websiteCategories.some(webCatId => webCatId.toString() === categoryId.toString())
+      );
+
+      return {
+        websiteId,
+        categories: validCategories,
+        approved: false,
+        approvedAt: null
+      };
+    }).filter(selection => selection.categories.length > 0); // Only include websites that have matching categories
+
+    // Validate that we have at least one valid website-category combination
+    if (websiteSelections.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid Selection',
+        message: 'No valid website and category combinations found'
+      });
+    }
+
+    // Create new ad entry with restructured data
     const newRequestAd = new ImportAd({
       userId,
       adOwnerEmail,
       imageUrl,
       videoUrl,
+      pdfUrl,
       businessName,
       businessLink,
       businessLocation,
       adDescription,
-      selectedWebsites: websitesArray,
-      selectedCategories: categoriesArray,
-      // selectedSpaces: spacesArray,
+      websiteSelections,
+      confirmed: false,
+      clicks: 0,
+      views: 0
     });
 
     const savedRequestAd = await newRequestAd.save();
-    res.status(201).json(savedRequestAd);
+
+    // Populate the saved ad with website and category details
+    const populatedAd = await ImportAd.findById(savedRequestAd._id)
+      .populate('websiteSelections.websiteId')
+      .populate('websiteSelections.categories');
+
+    res.status(201).json(populatedAd);
   } catch (err) {
     console.error('Error creating ad:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: err.message 
+    });
   }
 }];
 
