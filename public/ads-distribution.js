@@ -1,7 +1,7 @@
 // public/ads-distribution.js
 (async () => {
   try {
-    const response = await fetch('http://localhost:5000/api/ads/random');
+    const response = await fetch('https://yepper-backend.onrender.com/api/ads/random');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

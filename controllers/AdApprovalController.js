@@ -654,7 +654,7 @@ exports.initiateAdPayment = async (req, res) => {
       tx_ref,
       amount: Number(amount),
       currency: 'RWF',
-      redirect_url: "http://localhost:5000/api/accept/callback",
+      redirect_url: "https://yepper-backend.onrender.com/api/accept/callback",
       meta: {
         adId,
         websiteId,
