@@ -721,13 +721,13 @@ exports.adPaymentCallback = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.query;
     if (!tx_ref || !transaction_id) {
-      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=invalid-params`);
+      return res.redirect('http://yepper.cc/approved-ads?status=invalid-params');
     }
 
     // Parse adId and websiteId from tx_ref
     const [prefix, timestamp, adId, websiteId] = tx_ref.split('-');
     if (!adId || !websiteId) {
-      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=invalid-txref`);
+      return res.redirect('http://yepper.cc/approved-ads?status=invalid-txref');
     }
 
     // Verify the transaction with Flutterwave
@@ -763,7 +763,7 @@ exports.adPaymentCallback = async (req, res) => {
     });
 
     if (existingConfirmedAd) {
-      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=already-confirmed`);
+      return res.redirect('http://yepper.cc/approved-ads?status=already-confirmed');
     }
 
     // Verify payment amount and currency
@@ -771,7 +771,7 @@ exports.adPaymentCallback = async (req, res) => {
       console.error('Payment amount or currency mismatch');
       payment.status = 'failed';
       await payment.save();
-      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=amount-mismatch`);
+      return res.redirect('http://yepper.cc/approved-ads?status=amount-mismatch');
     }
 
     // Update payment status based on verification
@@ -842,9 +842,9 @@ exports.adPaymentCallback = async (req, res) => {
 
       await session.commitTransaction();
       transactionStarted = false;
-      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=success`);
+      return res.redirect('http://yepper.cc/approved-ads?status=success');
     } else {
-      return res.redirect(`${process.env.FRONTEND_URL}/approved-ads?status=failed`);
+      return res.redirect('http://yepper.cc/approved-ads?status=failed');
     }
   } catch (error) {
     console.error('Error handling payment callback:', error.response?.data || error.message);

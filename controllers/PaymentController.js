@@ -229,11 +229,11 @@ exports.paymentCallback = async (req, res) => {
         });
       }
 
-      return res.redirect('http://localhost:3000/list');
+      return res.redirect('http://yepper.cc/list'); 
     } else {
       // Update the payment record as failed
       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-      return res.redirect('http://localhost:3000/failed');
+      return res.redirect('http://yepper.cc/failed');
     }
   } catch (error) {
     console.error('Error processing payment callback:', error);

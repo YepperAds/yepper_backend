@@ -19,7 +19,7 @@ const generateSecureScript = (categoryId) => {
   const coreScript = `
     const d=document,
           _i="${categoryId}",
-          _b="${process.env.BASE_URL || 'https://yepper-backend.onrender.com'}/api",
+          _b="https://yepper-backend.onrender.com/api",
           _t=5000;
 
     const _l=()=>{
