@@ -153,6 +153,103 @@
 const AdCategory = require('../models/AdCategoryModel');
 const ImportAd = require('../models/ImportAdModel');
 
+// exports.displayAd = async (req, res) => {
+//   try {
+//     res.header('Access-Control-Allow-Origin', '*');
+//     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+//     res.header('Access-Control-Allow-Headers', 'Content-Type');
+    
+//     const { categoryId, callback } = req.query;
+
+//     const adCategory = await AdCategory.findById(categoryId);
+//     if (!adCategory) {
+//       return res.status(404).json({ 
+//         error: 'Category not found',
+//         errorCode: 'CATEGORY_NOT_FOUND'
+//       });
+//     }
+
+//     // Modified query to correctly match the database structure
+//     const ads = await ImportAd.find({
+//       _id: { $in: adCategory.selectedAds },
+//       'websiteSelections': {
+//         $elemMatch: {
+//           websiteId: adCategory.websiteId,
+//           categories: categoryId,
+//           approved: true
+//         }
+//       },
+//       'confirmed': true
+//     });
+
+//     if (!ads || ads.length === 0) {
+//       return res.status(200).json({ 
+//         error: 'No eligible ads found',
+//         errorCode: 'NO_ELIGIBLE_ADS'
+//       });
+//     }
+
+//     const adsToShow = ads.slice(0, adCategory.userCount || ads.length);
+
+//     const adsHtml = adsToShow
+//       .map((ad) => {
+//         if (!ad) return '';
+
+//         try {
+//           const websiteSelection = ad.websiteSelections.find(
+//             sel => sel.websiteId.toString() === adCategory.websiteId.toString() &&
+//                   sel.approved
+//           );
+
+//           if (!websiteSelection) {
+//             return '';
+//           }
+
+//           const imageUrl = ad.imageUrl || 'https://via.placeholder.com/600x300';
+//           const targetUrl = ad.businessLink.startsWith('http') ? 
+//             ad.businessLink : `https://${ad.businessLink}`;
+
+//           return `
+//             <div class="ad-container" style="margin: 10px 0;">
+//               <a href="${targetUrl}" class="ad" data-ad-id="${ad._id}" style="text-decoration: none; color: inherit; display: block;">
+//                 <img src="${imageUrl}" alt="${ad.businessName}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
+//                 <p style="margin: 5px 0; text-align: center;">Sponsored by ${ad.businessName}</p>
+//               </a>
+//             </div>
+//           `;
+//         } catch (err) {
+//           console.error('[AdDisplay] Error generating HTML for ad:', ad._id, err);
+//           return '';
+//         }
+//       })
+//       .filter(html => html)
+//       .join('');
+
+//     if (!adsHtml) {
+//       return res.status(200).json({ 
+//         error: 'No ad HTML generated',
+//         errorCode: 'NO_AD_HTML'
+//       });
+//     }
+
+//     if (callback) {
+//       res.set('Content-Type', 'application/javascript');
+//       const response = `${callback}(${JSON.stringify({ html: adsHtml })})`;
+//       return res.send(response);
+//     }
+
+//     return res.send(adsHtml);
+
+//   } catch (error) {
+//     console.error('[AdDisplay] Critical error:', error);
+//     return res.status(500).json({ 
+//       error: 'Error displaying ads', 
+//       errorCode: 'INTERNAL_ERROR',
+//       details: error.message
+//     });
+//   }
+// };
+
 exports.displayAd = async (req, res) => {
   try {
     res.header('Access-Control-Allow-Origin', '*');
@@ -163,13 +260,9 @@ exports.displayAd = async (req, res) => {
 
     const adCategory = await AdCategory.findById(categoryId);
     if (!adCategory) {
-      return res.status(404).json({ 
-        error: 'Category not found',
-        errorCode: 'CATEGORY_NOT_FOUND'
-      });
+      return sendNoAdsResponse(res, callback);
     }
 
-    // Modified query to correctly match the database structure
     const ads = await ImportAd.find({
       _id: { $in: adCategory.selectedAds },
       'websiteSelections': {
@@ -183,10 +276,7 @@ exports.displayAd = async (req, res) => {
     });
 
     if (!ads || ads.length === 0) {
-      return res.status(200).json({ 
-        error: 'No eligible ads found',
-        errorCode: 'NO_ELIGIBLE_ADS'
-      });
+      return sendNoAdsResponse(res, callback);
     }
 
     const adsToShow = ads.slice(0, adCategory.userCount || ads.length);
@@ -226,10 +316,7 @@ exports.displayAd = async (req, res) => {
       .join('');
 
     if (!adsHtml) {
-      return res.status(200).json({ 
-        error: 'No ad HTML generated',
-        errorCode: 'NO_AD_HTML'
-      });
+      return sendNoAdsResponse(res, callback);
     }
 
     if (callback) {
@@ -242,13 +329,69 @@ exports.displayAd = async (req, res) => {
 
   } catch (error) {
     console.error('[AdDisplay] Critical error:', error);
-    return res.status(500).json({ 
-      error: 'Error displaying ads', 
-      errorCode: 'INTERNAL_ERROR',
-      details: error.message
-    });
+    return sendNoAdsResponse(res, callback);
   }
 };
+
+function sendNoAdsResponse(res, callback) {
+  const noAdsHtml = `
+    <div style="
+      border: 2px dashed #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      max-width: 100%;
+      margin: 10px auto;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    ">
+      <div style="
+        font-size: 18px;
+        color: #475569;
+        margin-bottom: 12px;
+        font-weight: 600;
+      ">
+        Available Space for Advertising
+      </div>
+      <div style="
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 16px;
+        line-height: 1.5;
+      ">
+        This space is available for your business advertisement
+      </div>
+      <a href="https://www.yepper.cc/select" 
+         target="_blank"
+         style="
+           display: inline-block;
+           background-color: #3b82f6;
+           color: white;
+           padding: 10px 24px;
+           border-radius: 6px;
+           text-decoration: none;
+           font-weight: 500;
+           font-size: 14px;
+           transition: background-color 0.2s;
+           box-shadow: 0 2px 4px rgba(59,130,246,0.2);
+         "
+         onmouseover="this.style.backgroundColor='#2563eb'"
+         onmouseout="this.style.backgroundColor='#3b82f6'"
+      >
+        Advertise Here
+      </a>
+    </div>
+  `;
+
+  if (callback) {
+    res.set('Content-Type', 'application/javascript');
+    const response = `${callback}(${JSON.stringify({ html: noAdsHtml })})`;
+    return res.send(response);
+  }
+
+  return res.send(noAdsHtml);
+}
 
 exports.incrementView = async (req, res) => {
   try {
