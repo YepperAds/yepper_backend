@@ -24,61 +24,61 @@ const pictureRoutes = require('./routes/PictureRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// const corsOptions = {
-//   origin: function(origin, callback) {
-//     // Allow requests from null origin (local files), localhost:3000, and your production domain
-//     const allowedOrigins = [
-//       'http://yepper.cc',
-//       'null',
-//       'file://',
-//       process.env.CLIENT_URL
-//     ];
-    
-//     if (!origin || allowedOrigins.includes(origin)) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error('Not allowed by CORS'));
-//     }
-//   },
-//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-//   credentials: true,
-//   allowedHeaders: ['Content-Type', 'Authorization']
-// };
-
 const corsOptions = {
-    origin: function(origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl requests)
-      if (!origin) {
-        return callback(null, true);
-      }
-  
-      const allowedOrigins = [
-        'http://yepper.cc',
-        'https://yepper.cc',
-        'http://localhost:3000',
-        'https://localhost:3000',
-        process.env.CLIENT_URL
-      ].filter(Boolean); // Remove any undefined values
-  
-      // Check if the origin is allowed
-      if (allowedOrigins.some(allowedOrigin => origin.indexOf(allowedOrigin) !== -1)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: true,
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-      'Origin'
-    ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 86400 // 24 hours
+  origin: function(origin, callback) {
+    // Allow requests from null origin (local files), localhost:3000, and your production domain
+    const allowedOrigins = [
+      'http://yepper.cc',
+      'null',
+      'file://',
+      process.env.CLIENT_URL
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
+
+// const corsOptions = {
+//     origin: function(origin, callback) {
+//       // Allow requests with no origin (like mobile apps, curl requests)
+//       if (!origin) {
+//         return callback(null, true);
+//       }
+  
+//       const allowedOrigins = [
+//         'http://yepper.cc',
+//         'https://yepper.cc',
+//         'http://localhost:3000',
+//         'https://localhost:3000',
+//         process.env.CLIENT_URL
+//       ].filter(Boolean); // Remove any undefined values
+  
+//       // Check if the origin is allowed
+//       if (allowedOrigins.some(allowedOrigin => origin.indexOf(allowedOrigin) !== -1)) {
+//         callback(null, true);
+//       } else {
+//         callback(new Error(`Origin ${origin} not allowed by CORS`));
+//       }
+//     },
+//     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//     credentials: true,
+//     allowedHeaders: [
+//       'Content-Type',
+//       'Authorization',
+//       'X-Requested-With',
+//       'Accept',
+//       'Origin'
+//     ],
+//     exposedHeaders: ['Content-Range', 'X-Content-Range'],
+//     maxAge: 86400 // 24 hours
+// };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
