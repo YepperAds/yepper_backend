@@ -46,44 +46,42 @@ const PORT = process.env.PORT || 5000;
 // };
 
 const corsOptions = {
-    origin: function(origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl requests)
-      if (!origin) {
-        return callback(null, true);
-      }
-  
-      const allowedOrigins = [
-        'http://yepper.cc',
-        'https://yepper.cc',
-        'http://localhost:3000',
-        'https://localhost:3000',
-        process.env.CLIENT_URL
-      ].filter(Boolean); // Remove any undefined values
-  
-      // Check if the origin is allowed
-      if (allowedOrigins.some(allowedOrigin => origin.indexOf(allowedOrigin) !== -1)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
-      }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: true,
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-      'Origin'
-    ],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    maxAge: 86400 // 24 hours
+  origin: function(origin, callback) {
+    // Allow requests from all your deployment URLs and development environments
+    const allowedOrigins = [
+      'http://yepper.cc',
+      'https://yepper.cc',
+      'https://www.yepper.cc',
+      'http://localhost:3000',
+      'http://localhost:5000',
+      undefined // Allow requests with no origin (like mobile apps or curl requests)
+    ];
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Added OPTIONS
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With']
 };
 
-app.use(cors(corsOptions));
+// Add CORS pre-flight handling
 app.options('*', cors(corsOptions));
-
 app.use(cors(corsOptions));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    message: 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
