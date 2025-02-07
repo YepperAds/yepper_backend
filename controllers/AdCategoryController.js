@@ -1,6 +1,6 @@
-// AdCategoryController.js
-const AdCategory = require('../models/AdCategoryModel');
-const crypto = require('crypto');
+// // AdCategoryController.js
+// const AdCategory = require('../models/AdCategoryModel');
+// const crypto = require('crypto');
 
 // const generateSecureScript = (categoryId) => {
 //   // Create a simple but effective encoding key
@@ -37,14 +37,75 @@ const crypto = require('crypto');
 //         }
 //       }
 //       if(s&&s.parentNode){s.parentNode.insertBefore(c,s);}else{d.body.appendChild(c);}
+      
+//       // Show loading state
 //       c.innerHTML='<div style="text-align:center;padding:20px;">Loading ad...</div>';
+      
+//       const showAvailableSpace = () => {
+//         c.innerHTML = \`
+//           <div style="
+//             border: 2px dashed #e2e8f0;
+//             border-radius: 8px;
+//             padding: 20px;
+//             text-align: center;
+//             background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+//             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+//             max-width: 100%;
+//             margin: 10px auto;
+//             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+//           ">
+//             <div style="
+//               font-size: 18px;
+//               color: #475569;
+//               margin-bottom: 12px;
+//               font-weight: 600;
+//             ">
+//               Available Space for Advertising
+//             </div>
+//             <div style="
+//               font-size: 14px;
+//               color: #64748b;
+//               margin-bottom: 16px;
+//               line-height: 1.5;
+//             ">
+//               This space is available for your business advertisement
+//             </div>
+//             <a href="https://www.yepper.cc/select" 
+//                target="_blank"
+//                style="
+//                  display: inline-block;
+//                  background-color: #3b82f6;
+//                  color: white;
+//                  padding: 10px 24px;
+//                  border-radius: 6px;
+//                  text-decoration: none;
+//                  font-weight: 500;
+//                  font-size: 14px;
+//                  transition: background-color 0.2s;
+//                  box-shadow: 0 2px 4px rgba(59,130,246,0.2);
+//                "
+//                onmouseover="this.style.backgroundColor='#2563eb'"
+//                onmouseout="this.style.backgroundColor='#3b82f6'"
+//             >
+//               Advertise Here
+//             </a>
+//           </div>
+//         \`;
+//       };
+
 //       const l=d.createElement("script");
 //       const r="y"+Math.random().toString(36).substr(2,9);
 //       window[r]=h=>{
-//         if(!h||!h.html){c.innerHTML='<div style="text-align:center;padding:20px;">No ads available</div>';return;}
+//         if(!h||!h.html){
+//           showAvailableSpace();
+//           return;
+//         }
 //         c.innerHTML=h.html;
 //         const a=[...c.getElementsByClassName("ad-container")];
-//         if(!a.length){c.innerHTML='<div style="text-align:center;padding:20px;">Error loading ads</div>';return;}
+//         if(!a.length){
+//           showAvailableSpace();
+//           return;
+//         }
 //         a.forEach(e=>e.style.display="none");
 //         a[0].style.display="block";
 //         a.forEach(e=>{
@@ -79,7 +140,9 @@ const crypto = require('crypto');
 //         delete window[r];
 //       };
 //       l.src=_b+"/ads/display?categoryId="+_i+"&callback="+r;
-//       l.onerror=()=>{c.innerHTML='<div style="text-align:center;padding:20px;">Failed to load ad content</div>';};
+//       l.onerror=()=>{
+//         showAvailableSpace();
+//       };
 //       d.body.appendChild(l);
 //     };
 //     if(d.readyState==="loading"){d.addEventListener("DOMContentLoaded",_l);}else{_l();}
@@ -87,7 +150,6 @@ const crypto = require('crypto');
 
 //   const encoded = encode(coreScript, key);
 
-//   // Create a browser-compatible loader that doesn't rely on crypto.subtle
 //   const loaderScript = `
 //     (function(){
 //       const _k='${key}';
@@ -120,8 +182,134 @@ const crypto = require('crypto');
 //   };
 // };
 
+// exports.createCategory = async (req, res) => {
+//   try {
+//     const { 
+//       ownerId, 
+//       websiteId, 
+//       categoryName, 
+//       description, 
+//       price, 
+//       customAttributes,
+//       spaceType,
+//       userCount,
+//       instructions,
+//       webOwnerEmail 
+//     } = req.body;
+
+//     if (!ownerId || !websiteId || !categoryName || !price || !spaceType || !webOwnerEmail) {
+//       return res.status(400).json({ message: 'Missing required fields' });
+//     }
+
+//     const newCategory = new AdCategory({
+//       ownerId,
+//       websiteId,
+//       categoryName,
+//       description,
+//       price,
+//       spaceType,
+//       userCount: userCount || 0,
+//       instructions,
+//       customAttributes: customAttributes || {},
+//       webOwnerEmail,
+//       selectedAds: []
+//     });
+
+//     const savedCategory = await newCategory.save();
+//     const { script } = generateSecureScript(savedCategory._id.toString());
+
+//     savedCategory.apiCodes = {
+//       HTML: `<script>\n${script}\n</script>`,
+//       JavaScript: script,
+//       PHP: `<?php echo '<script>\n${script}\n</script>'; ?>`,
+//       Python: `print('<script>\n${script}\n</script>')`
+//     };
+
+//     const finalCategory = await savedCategory.save();
+//     res.status(201).json(finalCategory);
+
+//   } catch (error) {
+//     console.error('Error creating category:', error);
+//     res.status(500).json({ 
+//       message: 'Failed to create category', 
+//       error: error.message 
+//     });
+//   }
+// };
+
+// exports.getCategories = async (req, res) => {
+//   const { ownerId } = req.params;
+//   const { page = 1, limit = 10 } = req.query;
+
+//   try {
+//     const categories = await AdCategory.find({ ownerId })
+//       .limit(limit * 1)
+//       .skip((page - 1) * limit)
+//       .exec();
+
+//     const count = await AdCategory.countDocuments({ ownerId });
+
+//     res.status(200).json({
+//       categories,
+//       totalPages: Math.ceil(count / limit),
+//       currentPage: page
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Failed to fetch categories', error });
+//   }
+// };
+
+// exports.getCategoriesByWebsite = async (req, res) => {
+//   const { websiteId } = req.params;
+//   const { page = 1, limit = 10 } = req.query;
+
+//   try {
+//     const categories = await AdCategory.find({ websiteId })
+//       .limit(limit * 1)
+//       .skip((page - 1) * limit)
+//       .exec();
+
+//     const count = await AdCategory.countDocuments({ websiteId });
+
+//     res.status(200).json({
+//       categories,
+//       totalPages: Math.ceil(count / limit),
+//       currentPage: page
+//     });
+//   } catch (error) {
+//     res.status(500).json({ message: 'Failed to fetch categories', error });
+//   }
+// };
+
+// exports.getCategoryById = async (req, res) => {
+//   const { categoryId } = req.params;
+
+//   try {
+//     const category = await AdCategory.findById(categoryId);
+
+//     if (!category) {
+//       return res.status(404).json({ message: 'Category not found' });
+//     }
+
+//     res.status(200).json(category);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Failed to fetch category', error });
+//   }
+// };
+
+
+
+
+
+
+
+
+
+// AdCategoryController.js
+const AdCategory = require('../models/AdCategoryModel');
+const crypto = require('crypto');
+
 const generateSecureScript = (categoryId) => {
-  // Create a simple but effective encoding key
   const key = Buffer.from(crypto.randomBytes(32)).toString('base64');
   
   const encode = (str, key) => {
@@ -141,134 +329,130 @@ const generateSecureScript = (categoryId) => {
           _t=5000;
 
     const _l=()=>{
-      const c=d.createElement("div");
-      c.id=_i+"-ad";
-      c.style.width="100%";
-      c.style.minHeight="100px";
-      let s=d.currentScript;
-      if(!s){
-        const scripts=d.getElementsByTagName("script");
-        for(let i=0;i<scripts.length;i++){
-          if(scripts[i].textContent.includes("${categoryId}")){
-            s=scripts[i];break;
+      // Get the current script element using a more reliable method
+      let currentScript = d.currentScript;
+      if (!currentScript) {
+        const scripts = d.getElementsByTagName('script');
+        for (let i = scripts.length - 1; i >= 0; i--) {
+          if (scripts[i].textContent.includes('${categoryId}')) {
+            currentScript = scripts[i];
+            break;
           }
         }
       }
-      if(s&&s.parentNode){s.parentNode.insertBefore(c,s);}else{d.body.appendChild(c);}
       
-      // Show loading state
-      c.innerHTML='<div style="text-align:center;padding:20px;">Loading ad...</div>';
-      
-      const showAvailableSpace = () => {
-        c.innerHTML = \`
-          <div style="
-            border: 2px dashed #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            max-width: 100%;
-            margin: 10px auto;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-          ">
-            <div style="
-              font-size: 18px;
-              color: #475569;
-              margin-bottom: 12px;
-              font-weight: 600;
-            ">
-              Available Space for Advertising
-            </div>
-            <div style="
-              font-size: 14px;
-              color: #64748b;
-              margin-bottom: 16px;
-              line-height: 1.5;
-            ">
-              This space is available for your business advertisement
-            </div>
-            <a href="https://www.yepper.cc/select" 
-               target="_blank"
-               style="
-                 display: inline-block;
-                 background-color: #3b82f6;
-                 color: white;
-                 padding: 10px 24px;
-                 border-radius: 6px;
-                 text-decoration: none;
-                 font-weight: 500;
-                 font-size: 14px;
-                 transition: background-color 0.2s;
-                 box-shadow: 0 2px 4px rgba(59,130,246,0.2);
-               "
-               onmouseover="this.style.backgroundColor='#2563eb'"
-               onmouseout="this.style.backgroundColor='#3b82f6'"
-            >
-              Advertise Here
-            </a>
+      if (!currentScript) {
+        console.error('Could not find ad script element');
+        return;
+      }
+
+      // Create and insert container
+      const container = d.createElement('div');
+      container.className = 'yepper-ad-wrapper';
+      currentScript.parentNode.insertBefore(container, currentScript);
+
+      const showEmptyState = () => {
+        container.innerHTML = \`
+          <div class="yepper-ad-empty">
+            <div class="yepper-ad-empty-title">Available Space for Advertising</div>
+            <div class="yepper-ad-empty-text">Premium spot for your business advertisement</div>
+            <a href="https://yepper.cc/select" class="yepper-ad-empty-link">Advertise Here</a>
           </div>
         \`;
       };
 
-      const l=d.createElement("script");
-      const r="y"+Math.random().toString(36).substr(2,9);
-      window[r]=h=>{
-        if(!h||!h.html){
-          showAvailableSpace();
+      const l = d.createElement("script");
+      const r = "y"+Math.random().toString(36).substr(2,9);
+      
+      window[r] = h => {
+        if(!h || !h.html) {
+          showEmptyState();
           return;
         }
-        c.innerHTML=h.html;
-        const a=[...c.getElementsByClassName("ad-container")];
-        if(!a.length){
-          showAvailableSpace();
+
+        container.innerHTML = h.html;
+
+        const items = [...container.getElementsByClassName("yepper-ad-item")];
+        
+        if(!items.length) {
+          showEmptyState();
           return;
         }
-        a.forEach(e=>e.style.display="none");
-        a[0].style.display="block";
-        a.forEach(e=>{
-          const link=e.querySelector('a');
-          if(!link)return;
-          const i=link.dataset.adId;
-          const viewTracker=()=>{
-            fetch(_b+"/ads/view/"+i,{method:'POST',mode:'cors',credentials:'omit'}).catch(console.error);
+        
+        // Hide all items except first
+        items.forEach((e, index) => {
+          if(index !== 0) e.style.display = "none";
+        });
+        
+        // Track views and handle clicks
+        items.forEach(e => {
+          const link = e.querySelector('.yepper-ad-link');
+          if(!link) return;
+          
+          const i = e.dataset.adId;
+          const viewTracker = () => {
+            fetch(_b+"/ads/view/"+i, {
+              method: 'POST',
+              mode: 'cors',
+              credentials: 'omit'
+            }).catch(console.error);
           };
-          if(e.style.display!=="none"){viewTracker();}
-          link.onclick=ev=>{
+          
+          if(e.style.display !== "none") {
+            viewTracker();
+          }
+          
+          link.onclick = ev => {
             ev.preventDefault();
-            fetch(_b+"/ads/click/"+i,{method:'POST',mode:'cors',credentials:'omit'})
-            .then(()=>window.open(link.href,'_blank'))
-            .catch(()=>window.open(link.href,'_blank'));
+            fetch(_b+"/ads/click/"+i, {
+              method: 'POST',
+              mode: 'cors',
+              credentials: 'omit'
+            })
+            .then(() => window.open(link.href,'_blank'))
+            .catch(() => window.open(link.href,'_blank'));
             return false;
           };
         });
-        if(a.length>1){
-          let x=0;
-          setInterval(()=>{
-            a[x].style.display="none";
-            x=(x+1)%a.length;
-            a[x].style.display="block";
-            const link=a[x].querySelector('a');
-            if(link){
-              const i=link.dataset.adId;
-              fetch(_b+"/ads/view/"+i,{method:'POST',mode:'cors',credentials:'omit'}).catch(console.error);
+        
+        // Rotate ads if multiple
+        if(items.length > 1) {
+          let x = 0;
+          setInterval(() => {
+            items[x].style.display = "none";
+            x = (x + 1) % items.length;
+            items[x].style.display = "block";
+            
+            const link = items[x].querySelector('.yepper-ad-link');
+            if(link) {
+              const i = items[x].dataset.adId;
+              fetch(_b+"/ads/view/"+i, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'omit'
+              }).catch(console.error);
             }
-          },_t);
+          }, _t);
         }
+        
         delete window[r];
       };
-      l.src=_b+"/ads/display?categoryId="+_i+"&callback="+r;
-      l.onerror=()=>{
-        showAvailableSpace();
+      
+      l.src = _b+"/ads/display?categoryId="+_i+"&callback="+r;
+      l.onerror = () => {
+        showEmptyState();
       };
       d.body.appendChild(l);
     };
-    if(d.readyState==="loading"){d.addEventListener("DOMContentLoaded",_l);}else{_l();}
+
+    // Run the initialization immediately instead of waiting for DOMContentLoaded
+    _l();
   `;
 
   const encoded = encode(coreScript, key);
 
-  const loaderScript = `
+  return {
+    script: `
     (function(){
       const _k='${key}';
       const _d='${encoded}';
@@ -290,13 +474,20 @@ const generateSecureScript = (categoryId) => {
         f();
       } catch(e) {
         console.error('Ad script initialization error:',e);
+        if(document.currentScript) {
+          const container = document.createElement('div');
+          container.className = 'yepper-ad-wrapper';
+          document.currentScript.parentNode.insertBefore(container, document.currentScript);
+          container.innerHTML = \`
+            <div class="yepper-ad-empty">
+              <div class="yepper-ad-empty-title">Advertisement</div>
+              <div class="yepper-ad-empty-text">Unable to load advertisement</div>
+            </div>
+          \`;
+        }
       }
-    })();
-  `;
-
-  return {
-    script: loaderScript,
-    key: key
+    })();`,
+    key
   };
 };
 
@@ -312,10 +503,12 @@ exports.createCategory = async (req, res) => {
       spaceType,
       userCount,
       instructions,
-      webOwnerEmail 
+      webOwnerEmail,
+      visitorRange,
+      tier
     } = req.body;
 
-    if (!ownerId || !websiteId || !categoryName || !price || !spaceType || !webOwnerEmail) {
+    if (!ownerId || !websiteId || !categoryName || !price || !spaceType || !webOwnerEmail || !visitorRange || !tier) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -330,7 +523,9 @@ exports.createCategory = async (req, res) => {
       instructions,
       customAttributes: customAttributes || {},
       webOwnerEmail,
-      selectedAds: []
+      selectedAds: [],
+      visitorRange,
+      tier
     });
 
     const savedCategory = await newCategory.save();
@@ -338,14 +533,14 @@ exports.createCategory = async (req, res) => {
 
     savedCategory.apiCodes = {
       HTML: `<script>\n${script}\n</script>`,
-      JavaScript: script,
+      JavaScript: `const script = document.createElement('script');\nscript.textContent = \`${script}\`;\ndocument.body.appendChild(script);`,
       PHP: `<?php echo '<script>\n${script}\n</script>'; ?>`,
       Python: `print('<script>\n${script}\n</script>')`
     };
 
     const finalCategory = await savedCategory.save();
     res.status(201).json(finalCategory);
-
+    
   } catch (error) {
     console.error('Error creating category:', error);
     res.status(500).json({ 

@@ -7,44 +7,43 @@
 // // Initialize Flutterwave
 // const flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
-// exports.initiateMomoPayment = async (req, res) => {
+// exports.initiateCardPayment = async (req, res) => {
 //   try {
-//     const { amount, currency, phoneNumber, userId, pictureId } = req.body;
+//     const { amount, currency, email, phoneNumber, userId, pictureId } = req.body;
 
 //     if (!amount || !currency || !phoneNumber || !userId || !pictureId) {
 //       return res.status(400).json({ message: 'Missing required fields' });
 //     }
 
-//     const tx_ref = 'MOMOPAY-' + Date.now();
+//     const tx_ref = 'CARDPAY-' + Date.now();
 
-//     // Save the pending payment in the database
+//     // Step 1: Save the pending payment in the database
 //     const payment = new Payment({
 //       tx_ref,
 //       amount,
 //       currency,
+//       email,
 //       phoneNumber,
 //       userId,
 //       pictureId,
-//       status: 'pending',
+//       status: 'pending'
 //     });
 //     await payment.save();
 
-//     // Initiate the payment with Flutterwave
+//     // Step 2: Initiate the payment with Flutterwave
 //     const paymentPayload = {
 //       tx_ref,
-//       amount: amount.toString(), // Ensure amount is a string
+//       amount,
 //       currency,
-//       redirect_url: 'http://localhost:5000/api/payment/callback',
-//       payment_options: 'mobilemoneyrw',
+//       redirect_url: 'https://yepper-backend.onrender.com/api/payment/callback',
 //       customer: {
+//         email: email || 'no-email@example.com',
 //         phonenumber: phoneNumber,
-//         email: 'user@example.com', // Default if email is not provided
-//         name: `User-${userId}`,
 //       },
+//       payment_options: 'card',
 //       customizations: {
-//         title: 'Momo Payment',
-//         description: 'Pay using Mobile Money',
-//         logo: 'https://your-logo-url.com/logo.png', // Optional customization
+//         title: 'Card Payment',
+//         description: 'Pay with your bank card',
 //       },
 //     };
 
@@ -61,19 +60,18 @@
 //       res.status(500).json({ message: 'Payment initiation failed', error: response.data });
 //     }
 //   } catch (error) {
-//     console.error('Error initiating payment:', error.response?.data || error);
 //     res.status(500).json({ message: 'Error during payment initiation' });
 //   }
 // };
-
+ 
 // exports.paymentCallback = async (req, res) => {
 //   try {
 //     const { tx_ref, transaction_id } = req.query;
 
 //     const transactionVerification = await axios.get(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
 //       headers: {
-//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-//       },
+//         Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`
+//       }
 //     });
 
 //     const { status, customer, amount, currency } = transactionVerification.data.data;
@@ -89,51 +87,21 @@
 //       if (payment) {
 //         // Add user to the list of paid users for the picture
 //         await Picture.findByIdAndUpdate(payment.pictureId, {
-//           $addToSet: { paidUsers: payment.userId },
+//           $addToSet: { paidUsers: payment.userId }
 //         });
 //       }
 
-//       return res.redirect('http://localhost:3000/list');
+//       return res.redirect('http://yepper.cc/list'); 
 //     } else {
 //       // Update the payment record as failed
 //       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-//       return res.redirect('http://localhost:3000/failed');
+//       return res.redirect('http://yepper.cc/failed');
 //     }
 //   } catch (error) {
 //     console.error('Error processing payment callback:', error);
 //     res.status(500).json({ message: 'Error processing payment callback' });
 //   }
 // };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // Paymentcontroller.js
@@ -229,11 +197,11 @@ exports.paymentCallback = async (req, res) => {
         });
       }
 
-      return res.redirect('http://yepper.cc/list'); 
+      return res.redirect('https://yepper.cc/list'); 
     } else {
       // Update the payment record as failed
       await Payment.findOneAndUpdate({ tx_ref }, { status: 'failed' });
-      return res.redirect('http://yepper.cc/failed');
+      return res.redirect('https://yepper.cc/failed');
     }
   } catch (error) {
     console.error('Error processing payment callback:', error);
