@@ -42,6 +42,15 @@ const adCategorySchema = new mongoose.Schema({
   },
   selectedAds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd' }],
   webOwnerEmail: { type: String, required: true },
+  visitorRange: {
+    min: { type: Number, required: true },
+    max: { type: Number, required: true }
+  },
+  tier: {
+    type: String,
+    enum: ['bronze', 'silver', 'gold', 'platinum'],
+    required: true
+  },
   createdAt: { type: Date, default: Date.now }
 });
 

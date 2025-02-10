@@ -9,6 +9,7 @@
 
 // module.exports = mongoose.model('WebOwnerBalance', webOwnerBalanceSchema);
 
+// WebOwnerBalanceModel.js
 const mongoose = require('mongoose');
 
 const webOwnerBalanceSchema = new mongoose.Schema({
@@ -26,5 +27,3 @@ const webOwnerBalanceSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('WebOwnerBalance', webOwnerBalanceSchema);
-
-

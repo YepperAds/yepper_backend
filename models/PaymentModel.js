@@ -12,6 +12,7 @@ const paymentSchema = new mongoose.Schema({
   adId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd', required: true },
   webOwnerId: { type: String }, // New field for web owner
   withdrawn: { type: Boolean, default: false },
+  paymentTrackerId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentTracker' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payment', paymentSchema);

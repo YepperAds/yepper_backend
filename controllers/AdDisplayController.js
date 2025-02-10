@@ -1,203 +1,3 @@
-// // AdDisplayController.js
-// const AdCategory = require('../models/AdCategoryModel');
-// const ImportAd = require('../models/ImportAdModel');
-
-// exports.displayAd = async (req, res) => {
-//   try {
-//     res.header('Access-Control-Allow-Origin', '*');
-//     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-//     res.header('Access-Control-Allow-Headers', 'Content-Type');
-    
-//     const { categoryId, callback } = req.query;
-
-//     const adCategory = await AdCategory.findById(categoryId);
-//     if (!adCategory) {
-//       return sendNoAdsResponse(res, callback);
-//     }
-
-//     const ads = await ImportAd.find({
-//       _id: { $in: adCategory.selectedAds },
-//       'websiteSelections': {
-//         $elemMatch: {
-//           websiteId: adCategory.websiteId,
-//           categories: categoryId,
-//           approved: true
-//         }
-//       },
-//       'confirmed': true
-//     });
-
-//     if (!ads || ads.length === 0) {
-//       return sendNoAdsResponse(res, callback);
-//     }
-
-//     const adsToShow = ads.slice(0, adCategory.userCount || ads.length);
-
-//     const adsHtml = adsToShow
-//       .map((ad) => {
-//         if (!ad) return '';
-
-//         try {
-//           const websiteSelection = ad.websiteSelections.find(
-//             sel => sel.websiteId.toString() === adCategory.websiteId.toString() &&
-//                   sel.approved
-//           );
-
-//           if (!websiteSelection) {
-//             return '';
-//           }
-
-//           const imageUrl = ad.imageUrl || 'https://via.placeholder.com/600x300';
-//           const targetUrl = ad.businessLink.startsWith('http') ? 
-//             ad.businessLink : `https://${ad.businessLink}`;
-
-//           return `
-//             <div class="ad-container" style="margin: 10px 0;">
-//               <a href="${targetUrl}" class="ad" data-ad-id="${ad._id}" style="text-decoration: none; color: inherit; display: block;">
-//                 <img src="${imageUrl}" alt="${ad.businessName}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;">
-//                 <p style="margin: 5px 0; text-align: center;">Sponsored by ${ad.businessName}</p>
-//               </a>
-//             </div>
-//           `;
-//         } catch (err) {
-//           console.error('[AdDisplay] Error generating HTML for ad:', ad._id, err);
-//           return '';
-//         }
-//       })
-//       .filter(html => html)
-//       .join('');
-
-//     if (!adsHtml) {
-//       return sendNoAdsResponse(res, callback);
-//     }
-
-//     if (callback) {
-//       res.set('Content-Type', 'application/javascript');
-//       const response = `${callback}(${JSON.stringify({ html: adsHtml })})`;
-//       return res.send(response);
-//     }
-
-//     return res.send(adsHtml);
-
-//   } catch (error) {
-//     console.error('[AdDisplay] Critical error:', error);
-//     return sendNoAdsResponse(res, callback);
-//   }
-// };
-
-// function sendNoAdsResponse(res, callback) {
-//   const noAdsHtml = `
-//     <div style="
-//       border: 2px dashed #e2e8f0;
-//       border-radius: 8px;
-//       padding: 20px;
-//       text-align: center;
-//       background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
-//       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-//       max-width: 100%;
-//       margin: 10px auto;
-//       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-//     ">
-//       <div style="
-//         font-size: 18px;
-//         color: #475569;
-//         margin-bottom: 12px;
-//         font-weight: 600;
-//       ">
-//         Available Space for Advertising
-//       </div>
-//       <div style="
-//         font-size: 14px;
-//         color: #64748b;
-//         margin-bottom: 16px;
-//         line-height: 1.5;
-//       ">
-//         This space is available for your business advertisement
-//       </div>
-//       <a href="https://www.yepper.cc/select" 
-//          target="_blank"
-//          style="
-//            display: inline-block;
-//            background-color: #3b82f6;
-//            color: white;
-//            padding: 10px 24px;
-//            border-radius: 6px;
-//            text-decoration: none;
-//            font-weight: 500;
-//            font-size: 14px;
-//            transition: background-color 0.2s;
-//            box-shadow: 0 2px 4px rgba(59,130,246,0.2);
-//          "
-//          onmouseover="this.style.backgroundColor='#2563eb'"
-//          onmouseout="this.style.backgroundColor='#3b82f6'"
-//       >
-//         Advertise Here
-//       </a>
-//     </div>
-//   `;
-
-//   if (callback) {
-//     res.set('Content-Type', 'application/javascript');
-//     const response = `${callback}(${JSON.stringify({ html: noAdsHtml })})`;
-//     return res.send(response);
-//   }
-
-//   return res.send(noAdsHtml);
-// }
-
-// exports.incrementView = async (req, res) => {
-//   try {
-//     const { adId } = req.params;
-    
-//     if (!adId) {
-//       return res.status(400).json({ error: 'Ad ID is required' });
-//     }
-
-//     const updatedAd = await ImportAd.findByIdAndUpdate(
-//       adId, 
-//       { $inc: { views: 1 } },
-//       { new: true, select: 'views' }
-//     );
-
-//     if (!updatedAd) {
-//       return res.status(404).json({ error: 'Ad not found' });
-//     }
-
-//     return res.status(200).json({ views: updatedAd.views });
-//   } catch (error) {
-//     console.error('Error recording view:', error);
-//     return res.status(500).json({ error: 'Failed to record view' });
-//   }
-// };
-
-// exports.incrementClick = async (req, res) => {
-//   try {
-//     const { adId } = req.params;
-    
-//     if (!adId) {
-//       return res.status(400).json({ error: 'Ad ID is required' });
-//     }
-
-//     const updatedAd = await ImportAd.findByIdAndUpdate(
-//       adId, 
-//       { $inc: { clicks: 1 } },
-//       { new: true, select: 'clicks' }
-//     );
-
-//     if (!updatedAd) {
-//       return res.status(404).json({ error: 'Ad not found' });
-//     }
-
-//     return res.status(200).json({ clicks: updatedAd.clicks });
-//   } catch (error) {
-//     console.error('Error recording click:', error);
-//     return res.status(500).json({ error: 'Failed to record click' });
-//   }
-// };
-
-
-
-
 // AdDisplayController.js
 const AdCategory = require('../models/AdCategoryModel');
 const ImportAd = require('../models/ImportAdModel');
@@ -343,7 +143,7 @@ exports.displayAd = async (req, res) => {
     `;
 
     const styleTag = `<style>${styles}</style>`;
-
+    
     const ads = await ImportAd.find({
       _id: { $in: adCategory.selectedAds },
       'websiteSelections': {
@@ -372,15 +172,21 @@ exports.displayAd = async (req, res) => {
                   sel.approved
           );
 
-          if (!websiteSelection) return '';
-
           const imageUrl = ad.imageUrl || 'https://via.placeholder.com/600x300';
           const targetUrl = ad.businessLink.startsWith('http') ? 
             ad.businessLink : `https://${ad.businessLink}`;
 
+          // Add data attributes for tracking
           return `
-            <div class="yepper-ad-item" data-ad-id="${ad._id}">
-              <a href="${targetUrl}" class="yepper-ad-link" target="_blank" rel="noopener">
+            <div class="yepper-ad-item" 
+                  data-ad-id="${ad._id}"
+                  data-category-id="${categoryId}"
+                  data-website-id="${adCategory.websiteId}">
+              <a href="${targetUrl}" 
+                  class="yepper-ad-link" 
+                  target="_blank" 
+                  rel="noopener"
+                  data-tracking="true">
                 <div class="yepper-ad-image-wrapper">
                   <img class="yepper-ad-image" src="${imageUrl}" alt="${ad.businessName}" loading="lazy">
                 </div>
@@ -396,11 +202,58 @@ exports.displayAd = async (req, res) => {
       .filter(html => html)
       .join('');
 
-    if (!adsHtml) {
-      return sendNoAdsResponse(res, callback);
-    }
+    const trackingScript = `
+      <script>
+        function trackView(adId) {
+          return fetch('${req.protocol}://${req.get('host')}/api/ads/view/' + adId, {
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'omit',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }).catch(console.error);
+        }
 
-    const finalHtml = `${styleTag}<div class="yepper-ad-container">${adsHtml}</div>`;
+        function trackClick(adId) {
+          return fetch('${req.protocol}://${req.get('host')}/api/ads/click/' + adId, {
+            method: 'POST',
+            mode: 'cors',
+            credentials: 'omit',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }).catch(console.error);
+        }
+
+        // Initialize tracking
+        document.addEventListener('DOMContentLoaded', function() {
+          const adItems = document.querySelectorAll('.yepper-ad-item[data-ad-id]');
+          
+          adItems.forEach(item => {
+            const adId = item.dataset.adId;
+            
+            // Track initial view
+            if (item.style.display !== 'none') {
+              trackView(adId);
+            }
+
+            // Track clicks
+            const link = item.querySelector('a[data-tracking="true"]');
+            if (link) {
+              link.addEventListener('click', function(e) {
+                e.preventDefault();
+                trackClick(adId).then(() => {
+                  window.open(this.href, '_blank');
+                });
+              });
+            }
+          });
+        });
+      </script>
+    `;
+
+    const finalHtml = `${styleTag}${trackingScript}<div class="yepper-ad-container">${adsHtml}</div>`;
 
     if (callback) {
       res.set('Content-Type', 'application/javascript');
@@ -409,9 +262,8 @@ exports.displayAd = async (req, res) => {
     }
 
     return res.send(finalHtml);
-
   } catch (error) {
-    console.error('[AdDisplay] Critical error:', error);
+    console.error('[AdDisplay] Error:', error);
     return sendNoAdsResponse(res, callback);
   }
 };
@@ -422,7 +274,7 @@ function sendNoAdsResponse(res, callback) {
       <div class="yepper-ad-empty">
         <div class="yepper-ad-empty-title">Available Advertising Space</div>
         <div class="yepper-ad-empty-text">Premium spot for your business advertisement</div>
-        <a href="https://yepper.cc/select" class="yepper-ad-empty-link">Advertise Here</a>
+        <a href="https://www.yepper.cc/select" class="yepper-ad-empty-link">Advertise Here</a>
       </div>
     </div>
   `;
@@ -439,42 +291,45 @@ function sendNoAdsResponse(res, callback) {
 exports.incrementView = async (req, res) => {
   try {
     const { adId } = req.params;
-    
-    if (!adId) {
-      return res.status(400).json({ error: 'Ad ID is required' });
-    }
 
-    // Increment views on the ad
-    const updatedAd = await ImportAd.findByIdAndUpdate(
-      adId, 
-      { $inc: { views: 1 } },
-      { new: true, select: 'views' }
-    )
+    // Use a transaction to ensure both updates succeed or fail together
+    const session = await ImportAd.startSession();
+    await session.withTransaction(async () => {
+      // Increment views on the ad
+      const updatedAd = await ImportAd.findByIdAndUpdate(
+        adId, 
+        { $inc: { views: 1 } },
+        { new: true, select: 'views', session }
+      );
 
-    // Update the payment tracker's view count
-    await PaymentTracker.updateOne(
-      { adId },
-      { $inc: { currentViews: 1 } }
-    )
+      if (!updatedAd) {
+        throw new Error('Ad not found');
+      }
 
-    if (!updatedAd) {
-      return res.status(404).json({ error: 'Ad not found' });
-    }
+      // Update the payment tracker's view count
+      const updatedTracker = await PaymentTracker.findOneAndUpdate(
+        { adId },
+        { $inc: { currentViews: 1 } },
+        { new: true, session }
+      );
 
-    return res.status(200).json({ views: updatedAd.views });
+      if (!updatedTracker) {
+        throw new Error('Payment tracker not found');
+      }
+    });
+
+    await session.endSession();
+    return res.status(200).json({ success: true });
 
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to increment view count' });
+    console.error('[IncrementView] Error:', error);
+    return res.status(500).json({ error: 'Failed to track view' });
   }
 };
 
 exports.incrementClick = async (req, res) => {
   try {
     const { adId } = req.params;
-    
-    if (!adId) {
-      return res.status(400).json({ error: 'Ad ID is required' });
-    }
 
     const updatedAd = await ImportAd.findByIdAndUpdate(
       adId, 
@@ -483,12 +338,12 @@ exports.incrementClick = async (req, res) => {
     );
 
     if (!updatedAd) {
-      return res.status(404).json({ error: 'Ad not found' });
+      throw new Error('Ad not found');
     }
 
-    return res.status(200).json({ clicks: updatedAd.clicks });
+    return res.status(200).json({ success: true });
   } catch (error) {
-    console.error('Error recording click:', error);
-    return res.status(500).json({ error: 'Failed to record click' });
+    console.error('[IncrementClick] Error:', error);
+    return res.status(500).json({ error: 'Failed to track click' });
   }
 };
