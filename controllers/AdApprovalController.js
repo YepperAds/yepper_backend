@@ -1365,8 +1365,6 @@ class WithdrawalService {
   }
 }
 
-
-
 exports.getPendingAds = async (req, res) => {
   try {
     const { ownerId } = req.params;
