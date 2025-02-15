@@ -1,389 +1,140 @@
-const axios = require('axios');
-const mongoose = require('mongoose');
-const ImportAd = require('../models/ImportAdModel');
-const AdCategory = require('../models/AdCategoryModel');
-const WebOwnerBalance = require('../models/WebOwnerBalanceModel');
-const Payment = require('../models/PaymentModel');
-const PaymentTracker = require('../models/PaymentTracker');
+// index.js
+import './index.css'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { RouterProvider, createBrowserRouter, Navigate } from 'react-router-dom'
+import { ClerkProvider } from '@clerk/clerk-react'
+import RootLayout from './layouts/root-layout'
+import DashboardLayout from './layouts/dashboard-layout'
+import SignInPage from './routes/sign-in'
+import SignUpPage from './routes/sign-up'
+// ... other imports
 
-exports.initiateAdPayment = async (req, res) => {
-  try {
-    const { adId, websiteId, amount, email, phoneNumber, userId } = req.body;
-
-    // Input validation
-    if (!adId || !websiteId || !amount || !email || !userId) {
-      return res.status(400).json({ 
-        message: 'Missing required fields', 
-        required: ['adId', 'websiteId', 'amount', 'email', 'userId'] 
-      });
-    }
-
-    // Validate amount is a positive number
-    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
-      return res.status(400).json({ message: 'Invalid amount' });
-    }
-
-    // Check if the ad is already confirmed for this website
-    const existingAd = await ImportAd.findOne({
-      _id: adId,
-      'websiteSelections': {
-        $elemMatch: {
-          websiteId: websiteId,
-          confirmed: true
-        }
-      }
-    });
-
-    if (existingAd) {
-      return res.status(400).json({ message: 'Ad is already confirmed for this website' });
-    }
-
-    // Find ad and verify it's approved but not confirmed
-    const ad = await ImportAd.findOne({
-      _id: adId,
-      'websiteSelections': {
-        $elemMatch: {
-          websiteId: websiteId,
-          approved: true,
-          confirmed: { $ne: true }
-        }
-      }
-    });
-
-    if (!ad) {
-      return res.status(404).json({ message: 'Ad not found or not approved for this website' });
-    }
-
-    // Get website selection and verify categories
-    const websiteSelection = ad.websiteSelections.find(
-      selection => selection.websiteId.toString() === websiteId.toString()
-    );
-
-    if (!websiteSelection || !websiteSelection.categories?.length) {
-      return res.status(400).json({ message: 'Invalid website selection or no categories selected' });
-    }
-
-    // Verify categories exist and have valid visitor ranges
-    const categories = await AdCategory.find({
-      _id: { $in: websiteSelection.categories },
-      websiteId: websiteId
-    });
-
-    if (!categories.length) {
-      return res.status(404).json({ message: 'Categories not found for this website' });
-    }
-
-    // Validate all categories have proper visitor ranges
-    const invalidCategories = categories.filter(
-      category => !category.visitorRange?.max || !category.visitorRange?.min
-    );
-
-    if (invalidCategories.length > 0) {
-      return res.status(400).json({ 
-        message: 'Invalid visitor ranges in categories',
-        invalidCategories: invalidCategories.map(c => c._id)
-      });
-    }
-
-    const tx_ref = `AD-${Date.now()}-${adId}-${websiteId}`;
-    const formattedPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
-
-    // Create payment record
-    const payment = new Payment({
-      tx_ref,
-      amount: Number(amount),
-      currency: 'RWF',
-      email,
-      phoneNumber: formattedPhone,
-      userId,
-      adId,
-      websiteId,
-      webOwnerId: categories[0].ownerId,
-      status: 'pending'
-    });
-
-    await payment.save();
-
-    // Construct Flutterwave payment payload
-    const paymentPayload = {
-      tx_ref,
-      amount: Number(amount),
-      currency: 'RWF',
-      redirect_url: "http://localhost:5000/api/accept/callback",
-      meta: {
-        adId,
-        websiteId,
-        userId
-      },
-      customer: {
-        email,
-        phonenumber: formattedPhone,
-        name: ad.businessName || email
-      },
-      customizations: {
-        title: 'Ad Space Payment',
-        description: `Payment for ad space on website - ${ad.businessName}`,
-        logo: process.env.COMPANY_LOGO_URL || ''
-      }
-    };
-
-    const response = await axios.post(
-      'https://api.flutterwave.com/v3/payments', 
-      paymentPayload, 
-      {
-        headers: { 
-          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    if (response.data?.status === 'success' && response.data?.data?.link) {
-      return res.status(200).json({ 
-        paymentLink: response.data.data.link,
-        tx_ref
-      });
-    }
-
-    // If we get here, something went wrong with the Flutterwave response
-    await Payment.findOneAndDelete({ tx_ref });
-    throw new Error('Invalid payment response from Flutterwave');
-
-  } catch (error) {
-    console.error('Error initiating payment:', error.response?.data || error.message);
-    
-    // Always try to delete the payment record if there's an error
-    if (error.tx_ref) {
-      try {
-        await Payment.findOneAndDelete({ tx_ref: error.tx_ref });
-      } catch (deleteError) {
-        console.error('Error deleting failed payment record:', deleteError);
-      }
-    }
-
-    return res.status(500).json({ 
-      message: 'Error initiating payment',
-      error: error.response?.data?.message || error.message
-    });
-  }
-};
-
-exports.adPaymentCallback = async (req, res) => {
-  const session = await mongoose.startSession();
-  let transactionStarted = false;
-
-  try {
-    const { tx_ref, transaction_id } = req.query;
-    
-    // Validate callback parameters
-    if (!tx_ref || !transaction_id) {
-      return res.redirect('http://localhost:3000/approved-ads?status=invalid-params');
-    }
-
-    // Parse and validate tx_ref format
-    const [prefix, timestamp, adId, websiteId] = tx_ref.split('-');
-    if (!prefix || prefix !== 'AD' || !timestamp || !adId || !websiteId) {
-      return res.redirect('http://localhost:3000/approved-ads?status=invalid-txref');
-    }
-
-    // Find the payment record first
-    const payment = await Payment.findOne({ tx_ref });
-    if (!payment) {
-      console.error('Payment record not found for tx_ref:', tx_ref);
-      return res.redirect('http://localhost:3000/approved-ads?status=payment-not-found');
-    }
-
-    // Verify the transaction with Flutterwave
-    let transactionVerification;
-    try {
-      transactionVerification = await axios.get(
-        `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-    } catch (verifyError) {
-      console.error('Flutterwave verification failed:', verifyError);
-      payment.status = 'failed';
-      await payment.save();
-      return res.redirect('http://localhost:3000/approved-ads?status=verification-failed');
-    }
-
-    const { status, amount, currency } = transactionVerification.data.data;
-
-    // Verify payment amount and currency
-    if (payment.amount !== amount || payment.currency !== currency) {
-      console.error('Payment amount or currency mismatch');
-      payment.status = 'failed';
-      await payment.save();
-      return res.redirect('http://localhost:3000/approved-ads?status=amount-mismatch');
-    }
-
-    if (status !== 'successful') {
-      payment.status = 'failed';
-      await payment.save();
-      return res.redirect('http://localhost:3000/approved-ads?status=failed');
-    }
-
-    // Start transaction for successful payments only
-    await session.startTransaction();
-    transactionStarted = true;
-
-    // Find the ad and validate its current state
-    const ad = await ImportAd.findOne({ _id: adId }).session(session);
-    if (!ad) {
-      throw new Error('Advertisement not found');
-    }
-
-    const websiteSelection = ad.websiteSelections.find(
-      sel => sel.websiteId.toString() === websiteId.toString()
-    );
-
-    if (!websiteSelection || !websiteSelection.approved || websiteSelection.confirmed) {
-      throw new Error('Invalid website selection or ad already confirmed');
-    }
-
-    // Find and validate all categories
-    const categories = await AdCategory.find({
-      _id: { $in: websiteSelection.categories },
-      websiteId: websiteId
-    }).session(session);
-
-    if (!categories.length) {
-      throw new Error('No valid categories found');
-    }
-
-    // Validate visitor ranges for all categories
-    const invalidCategories = categories.filter(
-      category => !category.visitorRange?.max || !category.visitorRange?.min
-    );
-
-    if (invalidCategories.length > 0) {
-      throw new Error('Invalid visitor ranges in categories');
-    }
-
-    // Update the ad status
-    const updatedAd = await ImportAd.findOneAndUpdate(
+const router = createBrowserRouter([
+  {
+    element: (
+      <ClerkProvider 
+        publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      >
+        <RootLayout />
+      </ClerkProvider>
+    ),
+    children: [
+      // Public Routes
+      { path: "/", element: <Home /> },
+      { path: "/yepper-ads", element: <AdsPage /> },
+      { path: "/yepper-spaces", element: <WebPage /> },
+      { path: "/terms", element: <TermsAndConditions /> },
+      { path: "/privacy", element: <PrivacyPolicy /> },
+      
+      // Auth Routes
       { 
-        _id: adId,
-        'websiteSelections': {
-          $elemMatch: {
-            websiteId: websiteId,
-            approved: true,
-            confirmed: { $ne: true }
+        path: "/sign-in/*", 
+        element: <SignInPage /> 
+      },
+      { 
+        path: "/sign-up/*", 
+        element: <SignUpPage /> 
+      },
+
+      // Protected Routes
+      {
+        element: <DashboardLayout />,
+        children: [
+          { path: "/referral", element: <ReferralPage /> },
+          { path: "/dashboard", element: <Dashboard /> },
+          { path: "/request", element: <Request /> },
+          { path: "/select", element: <Select /> },
+          { path: "/business", element: <Business /> },
+          { path: "/websites", element: <Advertisers /> },
+          { path: "/categories", element: <Categories /> },
+          { path: "/ad-success", element: <AdSuccess /> },
+          { path: "/approved-detail/:adId", element: <ApprovedAdDetail /> },
+          { path: "/projects", element: <Projects /> },
+          { path: "/pending-ads", element: <PendingAds /> },
+          { path: "/pending-ad/:adId", element: <PendingAdPreview /> },
+          { path: "/website/:websiteId", element: <WebsiteDetails /> },
+          { path: "/categories/:id", element: <ProjectCategories /> },
+          { path: "/create-website", element: <WebsiteCreation /> },
+          { path: "/create-categories/:websiteId", element: <CategoriesCreation /> },
+          { path: "/wallet", element: <Wallet /> },
+        ]
+      },
+
+      // Referral Route
+      {
+        path: "/ref/:code",
+        element: <Navigate to={location => `/sign-up?ref=${location.params.code}`} replace />
+      }
+    ]
+  }
+])
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <RouterProvider router={router} />
+  </React.StrictMode>,
+)
+
+// routes/sign-up.js
+import { SignUp } from "@clerk/clerk-react";
+import { useLocation } from "react-router-dom";
+import axios from "axios";
+
+export default function SignUpPage() {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const referralCode = searchParams.get('ref');
+  const [isRecordingReferral, setIsRecordingReferral] = useState(false);
+
+  const handleSignUpComplete = async (user) => {
+    if (referralCode) {
+      try {
+        setIsRecordingReferral(true);
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/referrals/record-referral`, {
+          referralCode,
+          referredUserId: user.id,
+          userType: 'website_owner',
+          userData: {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            emailAddress: user.primaryEmailAddress?.emailAddress,
           }
-        }
-      },
-      { 
-        $set: { 
-          'websiteSelections.$.confirmed': true,
-          'websiteSelections.$.confirmedAt': new Date()
-        }
-      },
-      { 
-        new: true,
-        session 
-      }
-    );
-
-    if (!updatedAd) {
-      throw new Error('Failed to update ad confirmation status');
-    }
-
-    // Update categories
-    await AdCategory.updateMany(
-      { 
-        _id: { $in: websiteSelection.categories },
-        websiteId: websiteId
-      },
-      { $addToSet: { selectedAds: updatedAd._id } },
-      { session }
-    );
-
-    // Update web owner's balance
-    await WebOwnerBalance.findOneAndUpdate(
-      { userId: payment.webOwnerId },
-      {
-        $inc: {
-          totalEarnings: payment.amount,
-          availableBalance: payment.amount
-        }
-      },
-      { upsert: true, session }
-    );
-
-    // Create payment trackers
-    const paymentTrackers = categories.map(category => ({
-      userId: payment.webOwnerId,
-      adId: ad._id,
-      categoryId: category._id,
-      paymentDate: new Date(),
-      amount: amount / categories.length,
-      viewsRequired: category.visitorRange.max,
-      currentViews: 0,
-      status: 'pending'
-    }));
-
-    await PaymentTracker.insertMany(paymentTrackers, { session });
-    
-    // Update payment status
-    payment.status = 'successful';
-    await payment.save({ session });
-
-    await session.commitTransaction();
-    transactionStarted = false;
-
-    return res.redirect('http://localhost:3000/approved-ads?status=success');
-
-  } catch (error) {
-    console.error('Error handling payment callback:', error);
-    
-    if (transactionStarted) {
-      await session.abortTransaction();
-    }
-
-    // If we have a payment reference, mark it as failed
-    if (tx_ref) {
-      try {
-        await Payment.findOneAndUpdate(
-          { tx_ref },
-          { $set: { status: 'failed' } }
-        );
-      } catch (updateError) {
-        console.error('Error updating payment status:', updateError);
+        });
+        
+        localStorage.setItem('referralCode', referralCode);
+      } catch (error) {
+        console.error('Error recording referral:', error);
+      } finally {
+        setIsRecordingReferral(false);
       }
     }
+  };
 
-    return res.redirect('http://localhost:3000/approved-ads?status=error');
-  } finally {
-    await session.endSession();
-  }
-};
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <SignUp
+        path="/sign-up"
+        routing="hash"
+        signInUrl="/sign-in"
+        afterSignUpUrl="/create-website"
+        redirectUrl="/create-website"
+        appearance={{
+          elements: {
+            rootBox: "mx-auto",
+            card: "p-8 rounded-lg shadow-md bg-white",
+            // Add more custom styles as needed
+          }
+        }}
+        onSignUpComplete={handleSignUpComplete}
+      />
+    </div>
+  );
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// .env.local
+VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+VITE_API_URL=http://localhost:5000
 
 
 
@@ -396,6 +147,44 @@ exports.adPaymentCallback = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// WebsiteModel.js
+const websiteSchema = new mongoose.Schema({
+  ownerId: { type: String, required: true },
+  websiteName: { type: String, required: true },
+  websiteLink: { type: String, required: true, unique: true },
+  imageUrl: { type: String, required: false },
+  createdAt: { type: Date, default: Date.now },
+});
 
 // AdCategoryModel.js
 const adCategorySchema = new mongoose.Schema({
@@ -428,395 +217,439 @@ const adCategorySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-adCategorySchema.index({ ownerId: 1, websiteId: 1, categoryName: 1 });
-
-// ImportAdModel.js
-const importAdSchema = new mongoose.Schema({
-  userId: { type: String, required: true, index: true },
-  adOwnerEmail: { type: String, required: true },
-  imageUrl: { type: String },
-  pdfUrl: { type: String },
-  videoUrl: { type: String },
-  businessName: { type: String, required: true },
-  businessLink: { type: String, required: true },
-  businessLocation: { type: String, required: true },
-  adDescription: { type: String, required: true },
-  websiteSelections: [{
-    websiteId: { type: mongoose.Schema.Types.ObjectId, ref: 'Website' },
-    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory' }],
-    approved: { type: Boolean, default: false },
-    approvedAt: { type: Date }
-  }],
-  confirmed: { type: Boolean, default: false },
-  clicks: { type: Number, default: 0 },
-  views: { type: Number, default: 0 },
+// ReferralCode.js
+const referralCodeSchema = new mongoose.Schema({
+  userId: { type: String, required: true, unique: true, index: true },
+  code: { type: String, required: true, unique: true, index: true },
+  userType: { type: String, enum: ['promoter', 'website_owner'], required: true },
+  totalReferrals: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
-importAdSchema.index({ userId: 1, 'websiteSelections.websiteId': 1 });
 
-// WebOwnerBalanceModel.js
-const webOwnerBalanceSchema = new mongoose.Schema({
-  userId: { 
+// Referral.js
+const referralSchema = new mongoose.Schema({
+  referrerId: { type: String, required: true },
+  referredUserId: { type: String, required: true },
+  referralCode: { type: String, required: true },
+  userType: { type: String, required: true },
+  status: { 
     type: String, 
-    required: true,
-    unique: true,
-    validate: {
-      validator: (v) => v?.trim() !== '',
-      message: 'User ID cannot be null or empty',
-    },
-  },
-  totalEarnings: { type: Number, default: 0 },
-  availableBalance: { type: Number, default: 0 },
-}, { timestamps: true });
-
-// PaymentModel.js
-const paymentSchema = new mongoose.Schema({
-  tx_ref: { type: String, required: true, unique: true },
-  amount: { type: Number, required: true },
-  currency: { type: String, required: true },
-  status: { type: String, enum: ['pending', 'successful', 'failed'], default: 'pending' },
-  email: { type: String },
-  phoneNumber: { type: String },
-  userId: { type: String },
-  adId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd', required: true },
-  webOwnerId: { type: String }, // New field for web owner
-  withdrawn: { type: Boolean, default: false },
-  paymentTrackerId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentTracker' }
-}, { timestamps: true });
-
-// PaymentTracker.js
-const paymentTrackerSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  adId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportAd', required: true },
-  categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'AdCategory', required: true },
-  paymentDate: { type: Date, required: true },
-  lastWithdrawalDate: { type: Date },
-  amount: { type: Number, required: true },
-  viewsRequired: { type: Number, required: true },
-  currentViews: { type: Number, default: 0 },
-  status: {
-    type: String,
-    enum: ['pending', 'available', 'withdrawn'],
+    enum: ['pending', 'website_created', 'category_created', 'qualified'],
     default: 'pending'
   },
-  paymentReference: { type: String, unique: true, sparse: true }
+  referredUserDetails: {
+    firstName: String,
+    lastName: String,
+    email: String,
+    createdAt: Date
+  },
+  websiteDetails: {
+    websiteId: String,
+    websiteName: String,
+    websiteLink: String,
+    createdAt: Date
+  },
+  categoryDetails: {
+    categoryId: String,
+    categoryName: String,
+    createdAt: Date
+  },
+  createdAt: { type: Date, default: Date.now },
+  qualifiedAt: Date,
+  lastUpdated: { type: Date, default: Date.now }
 });
 
-// AdApprovalController.js
-const axios = require('axios');
-const mongoose = require('mongoose');
-const ImportAd = require('../models/ImportAdModel');
-const AdCategory = require('../models/AdCategoryModel');
-const WebOwnerBalance = require('../models/WebOwnerBalanceModel'); // Balance tracking model
-const Payment = require('../models/PaymentModel');
-const PaymentTracker = require('../models/PaymentTracker');
+// WebsiteController.js
+const Website = require('../models/WebsiteModel');
+const Referral = require('../models/Referral'); // Add this import
+const axios = require('axios'); // Add this import
 
-exports.initiateAdPayment = async (req, res) => {
-    try {
-      const { adId, websiteId, amount, email, phoneNumber, userId } = req.body;
-  
-      // Input validation
-      if (!adId || !websiteId || !amount || !email || !userId) {
-        return res.status(400).json({ 
-          message: 'Missing required fields', 
-          required: ['adId', 'websiteId', 'amount', 'email', 'userId'] 
-        });
-      }
-  
-      // Check if the ad is already confirmed for this website
-      const existingAd = await ImportAd.findOne({
-        _id: adId,
-        'websiteSelections': {
-          $elemMatch: {
-            websiteId: websiteId,
-            confirmed: true
-          }
-        }
-      });
-  
-      if (existingAd) {
-        return res.status(400).json({ message: 'Ad is already confirmed for this website' });
-      }
-  
-      // Find ad and verify it's approved but not confirmed
-      const ad = await ImportAd.findOne({
-        _id: adId,
-        'websiteSelections': {
-          $elemMatch: {
-            websiteId: websiteId,
-            approved: true,
-            confirmed: { $ne: true }
-          }
-        }
-      });
-  
-      if (!ad) {
-        return res.status(404).json({ message: 'Ad not found or not approved for this website' });
-      }
-  
-      // Get website selection and verify categories
-      const websiteSelection = ad.websiteSelections.find(
-        selection => selection.websiteId.toString() === websiteId.toString()
-      );
-  
-      if (!websiteSelection || !websiteSelection.categories?.length) {
-        return res.status(400).json({ message: 'Invalid website selection or no categories selected' });
-      }
-  
-      // Verify categories exist
-      const categories = await AdCategory.find({
-        _id: { $in: websiteSelection.categories },
-        websiteId: websiteId
-      });
-  
-      if (!categories.length) {
-        return res.status(404).json({ message: 'Categories not found for this website' });
-      }
-  
-      const tx_ref = `AD-${Date.now()}-${adId}-${websiteId}`;
-  
-      // Format phone number to remove any spaces or special characters
-      const formattedPhone = phoneNumber ? phoneNumber.replace(/\D/g, '') : '';
-  
-      // Create payment record first
-      const payment = new Payment({
-        tx_ref,
-        amount: Number(amount),
-        currency: 'RWF',
-        email,
-        phoneNumber: formattedPhone,
-        userId,
-        adId,
-        websiteId,
-        webOwnerId: categories[0].ownerId,
-        status: 'pending'
-      });
-  
-      await payment.save();
-  
-      // Construct Flutterwave payment payload
-      const paymentPayload = {
-        tx_ref,
-        amount: Number(amount),
-        currency: 'RWF',
-        redirect_url: "http://localhost:5000/api/accept/callback",
-        meta: {
-          adId,
-          websiteId,
-          userId
-        },
-        customer: {
-          email,
-          phonenumber: formattedPhone,
-          name: ad.businessName || email // Use business name or email as customer name
-        },
-        customizations: {
-          title: 'Ad Space Payment',
-          description: `Payment for ad space on website - ${ad.businessName}`,
-          logo: process.env.COMPANY_LOGO_URL || '' // Optional company logo
-        }
+exports.createWebsite = [upload.single('file'), async (req, res) => {
+  try {
+    const { ownerId, websiteName, websiteLink } = req.body;
+    const existingWebsite = await Website.findOne({ websiteLink }).lean();
+
+    const newWebsite = new Website({
+      // data
+    });
+
+    const savedWebsite = await newWebsite.save();
+    const referral = await Referral.findOne({ 
+      referredUserId: ownerId,
+      status: { $in: ['pending', 'website_created'] }
+    });
+
+    if (referral) {
+      referral.status = 'website_created';
+      referral.websiteDetails = {
+        websiteId: savedWebsite._id,
+        websiteName: savedWebsite.websiteName,
+        websiteLink: savedWebsite.websiteLink,
+        createdAt: new Date()
       };
-  
-      console.log('Flutterwave payment payload:', JSON.stringify(paymentPayload, null, 2));
-  
-      // Make request to Flutterwave
-      const response = await axios.post(
-        'https://api.flutterwave.com/v3/payments', 
-        paymentPayload, 
-        {
-          headers: { 
-            Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-            'Content-Type': 'application/json'
+      referral.lastUpdated = new Date();
+      await referral.save();
+    }
+    
+    res.status(201).json(savedWebsite);
+  }
+}];
+
+// AdCategoryController.js
+const AdCategory = require('../models/AdCategoryModel');
+const Referral = require('../models/Referral'); // Add this import
+
+exports.createCategory = async (req, res) => {
+  try {
+    const { 
+      ownerId, 
+      websiteId, 
+      categoryName, 
+      description, 
+      price, 
+      customAttributes,
+      spaceType,
+      userCount,
+      instructions,
+      webOwnerEmail,
+      visitorRange,
+      tier
+    } = req.body;
+
+    const newCategory = new AdCategory({
+      // data
+    });
+
+    const savedCategory = await newCategory.save();
+    const { script } = generateSecureScript(savedCategory._id.toString());
+
+    savedCategory.apiCodes = {
+      HTML: `<script>\n${script}\n</script>`
+    };
+
+    const finalCategory = await savedCategory.save();
+
+    const referral = await Referral.findOne({ 
+      referredUserId: ownerId,
+      status: { $in: ['pending', 'website_created', 'category_created'] }
+    });
+
+    if (referral) {
+      referral.status = 'category_created';
+      referral.categoryDetails = {
+        categoryId: savedCategory._id,
+        categoryName: savedCategory.categoryName,
+        createdAt: new Date()
+      };
+      
+      if (referral.websiteDetails) {
+        referral.status = 'qualified';
+        referral.qualifiedAt = new Date();
+        
+        await ReferralCode.updateOne(
+          { userId: referral.referrerId },
+          { $inc: { totalReferrals: 1 } }
+        );
+      }
+
+      referral.lastUpdated = new Date();
+      await referral.save();
+    }
+    res.status(201).json(finalCategory); 
+  }
+};
+
+// controllers/referralController.js
+const ReferralCode = require('../models/ReferralCode');
+const Referral = require('../models/Referral');
+const Website = require('../models/WebsiteModel');
+const AdCategory = require('../models/AdCategoryModel');
+const ImportAd = require('../models/ImportAdModel');
+
+function generateUniqueCode(length = 8) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < length; i++) {
+    code += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return code;
+}
+
+const referralController = {
+  async generateCode(req, res, next) {
+    try {
+      const { userId, userType } = req.body;
+      let referralCode = await ReferralCode.findOne({ userId }).lean();
+      
+      if (!referralCode) {
+        let code;
+        let isUnique = false;
+        
+        while (!isUnique) {
+          code = generateUniqueCode();
+          const existing = await ReferralCode.findOne({ code }).lean();
+          if (!existing) {
+            isUnique = true;
           }
         }
-      );
-  
-      if (response.data?.status === 'success' && response.data?.data?.link) {
-        res.status(200).json({ 
-          paymentLink: response.data.data.link,
-          tx_ref
+        
+        referralCode = await ReferralCode.create({
+          userId,
+          code,
+          userType
         });
-      } else {
-        // If Flutterwave returns success but no payment link
-        throw new Error('Invalid payment response from Flutterwave');
       }
-    } catch (error) {
-      console.error('Error initiating payment:', error.response?.data || error.message);
       
-      // Delete the payment record if Flutterwave request failed
-      if (error.response?.status === 400) {
-        try {
-          await Payment.findOneAndDelete({ tx_ref });
-        } catch (deleteError) {
-          console.error('Error deleting failed payment record:', deleteError);
+      res.json({ 
+        success: true, 
+        referralCode: {
+          code: referralCode.code,
+          userId: referralCode.userId,
+          totalReferrals: referralCode.totalReferrals
         }
-      }
-  
-      res.status(500).json({ 
-        message: 'Error initiating payment',
-        error: error.response?.data?.message || error.message
       });
     }
-};
-  
-exports.adPaymentCallback = async (req, res) => {
-    const session = await mongoose.startSession();
-    let transactionStarted = false;
-  
+  },
+
+  async recordReferral(req, res) {
     try {
-      const { tx_ref, transaction_id } = req.query;
-      if (!tx_ref || !transaction_id) {
-        return res.redirect('http://localhost:3000/approved-ads?status=invalid-params');
-      }
-  
-      // Parse adId and websiteId from tx_ref
-      const [prefix, timestamp, adId, websiteId] = tx_ref.split('-');
-      if (!adId || !websiteId) {
-        return res.redirect('http://localhost:3000/approved-ads?status=invalid-txref');
-      }
-  
-      // Verify the transaction with Flutterwave
-      const transactionVerification = await axios.get(
-        `https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-            'Content-Type': 'application/json'
-          },
-        }
-      );
-  
-      const { status, amount, currency } = transactionVerification.data.data;
-  
-      // Find the payment record
-      const payment = await Payment.findOne({ tx_ref });
-  
-      if (!payment) {
-        console.error('Payment record not found for tx_ref:', tx_ref);
-        return res.redirect('http://localhost:3000/approved-ads?status=payment-not-found');
-      }
-  
-      // Verify payment amount and currency
-      if (payment.amount !== amount || payment.currency !== currency) {
-        console.error('Payment amount or currency mismatch');
-        payment.status = 'failed';
-        await payment.save();
-        return res.redirect('http://localhost:3000/approved-ads?status=amount-mismatch');
-      }
-  
-      if (status === 'successful') {
-        // Start transaction
-        await session.startTransaction();
-        transactionStarted = true;
-  
-        // Find the ad and its categories first
-        const ad = await ImportAd.findOne({ _id: adId }).session(session);
-        if (!ad) {
-          throw new Error('Advertisement not found');
-        }
-  
-        const websiteSelection = ad.websiteSelections.find(
-          sel => sel.websiteId.toString() === websiteId.toString()
-        );
-  
-        if (!websiteSelection) {
-          throw new Error('Website selection not found');
-        }
-  
-        // Find all relevant categories first
-        const categories = await AdCategory.find({
-          _id: { $in: websiteSelection.categories },
-          websiteId: websiteId
-        }).session(session);
-  
-        if (!categories.length) {
-          throw new Error('No valid categories found');
-        }
-  
-        // Update the ad status
-        const updatedAd = await ImportAd.findOneAndUpdate(
-          { 
-            _id: adId,
-            'websiteSelections': {
-              $elemMatch: {
-                websiteId: websiteId,
-                approved: true,
-                confirmed: { $ne: true }
-              }
-            }
-          },
-          { 
-            $set: { 
-              'websiteSelections.$.confirmed': true,
-              'websiteSelections.$.confirmedAt': new Date()
-            }
-          },
-          { 
-            new: true,
-            session 
-          }
-        );
-  
-        if (!updatedAd) {
-          throw new Error('Failed to update ad confirmation status');
-        }
-  
-        // Update categories
-        await AdCategory.updateMany(
-          { 
-            _id: { $in: websiteSelection.categories },
-            websiteId: websiteId
-          },
-          { $addToSet: { selectedAds: updatedAd._id } },
-          { session }
-        );
-  
-        // Update web owner's balance
-        await WebOwnerBalance.findOneAndUpdate(
-          { userId: payment.webOwnerId },
-          {
-            $inc: {
-              totalEarnings: payment.amount,
-              availableBalance: payment.amount
-            }
-          },
-          { upsert: true, session }
-        );
-  
-        // Create payment trackers for each category
-        const paymentTrackers = categories.map(category => ({
-          userId: payment.webOwnerId,
-          adId: ad._id,
-          categoryId: category._id,
-          paymentDate: new Date(),
-          amount: amount / categories.length, // Split amount across categories
-          viewsRequired: category.visitorRange.max,
-          currentViews: 0,
-          status: 'pending'
-        }));
-  
-        await PaymentTracker.insertMany(paymentTrackers, { session });
-        
-        // Update payment status
-        payment.status = 'successful';
-        await payment.save({ session });
-  
-        await session.commitTransaction();
-        transactionStarted = false;
-  
-        return res.redirect('http://localhost:3000/approved-ads?status=success');
-      } else {
-        payment.status = 'failed';
-        await payment.save();
-        return res.redirect('http://localhost:3000/approved-ads?status=failed');
-      }
-    } catch (error) {
-      console.error('Error handling payment callback:', error);
-      if (transactionStarted) {
-        await session.abortTransaction();
-      }
-      return res.redirect('http://localhost:3000/approved-ads?status=error');
-    } finally {
-      await session.endSession();
+      const { referralCode, referredUserId, userType } = req.body;
+      const referrerCode = await ReferralCode.findOne({ code: referralCode });      
+      const existingReferral = await Referral.findOne({ referredUserId });
+      const referral = await Referral.create({
+        referrerId: referrerCode.userId,
+        referredUserId,
+        referralCode,
+        userType,
+        status: 'pending',
+        lastUpdated: new Date()
+      });
+      
+      res.json({ success: true, referral });
     }
+  },
+
+  async completeReferral(req, res) {
+    try {
+      const { referredUserId } = req.body;
+      const referral = await Referral.findOne({ referredUserId, status: 'pending' });      
+      referral.status = 'qualified';
+      referral.qualifiedAt = new Date();
+      await referral.save();
+      await ReferralCode.updateOne(
+        { userId: referral.referrerId },
+        { $inc: { totalReferrals: 1 } }
+      );
+      
+      res.json({ success: true, referral });
+    }
+  },
+
+  async getReferralStats(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const referralCode = await ReferralCode.findOne({ userId }).lean();
+      const referrals = await Referral.find({ referrerId: userId })
+        .select('-__v')
+        .lean();
+      
+      const stats = {
+        code: referralCode.code,
+        totalReferrals: referralCode.totalReferrals,
+        referrals: referrals.map(ref => ({
+          userId: ref.referredUserId,
+          status: ref.status,
+          createdAt: ref.createdAt,
+          qualifiedAt: ref.qualifiedAt
+        }))
+      };
+      
+      res.json({ success: true, stats });
+    }
+  },
+
+  async checkQualifications(req, res) {
+    try {
+      const pendingReferrals = await Referral.find({ status: 'pending' });
+      for (const referral of pendingReferrals) {
+        if (referral.userType === 'website_owner') {
+          const websiteCount = await Website.countDocuments({ ownerId: referral.referredUserId });
+          const adCategoryCount = await AdCategory.countDocuments({ ownerId: referral.referredUserId });
+
+          if (websiteCount >= 1 && adCategoryCount >= 1) {
+            referral.status = 'qualified';
+            referral.qualifiedAt = new Date();
+            await referral.save();
+          }
+        } else if (referral.userType === 'advertiser') {
+          const adsCount = await ImportAd.countDocuments({ userId: referral.referredUserId });
+
+          if (adsCount >= 1) {
+            referral.status = 'qualified';
+            referral.qualifiedAt = new Date();
+            await referral.save();
+          }
+        }
+      }
+      
+      res.json({ success: true, message: 'Qualification check completed' });
+    }
+  }
+};
+
+// routes/referralRoutes.js
+router.post('/generate-code', referralController.generateCode);
+router.post('/record-referral', referralController.recordReferral);
+router.post('/complete-referral', referralController.completeReferral);
+router.get('/stats/:userId', referralController.getReferralStats);
+router.post('/check-qualifications', referralController.checkQualifications);
+
+// dashboard-layout.js
+export default function DashboardLayout() {
+  return <Outlet />;
+}
+
+// root-layout.js
+export default function RootLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const publicRoutes = ['/', '/yepper-ads', '/yepper-spaces', '/terms', '/privacy', '/sign-in', '/sign-up'];
+
+  useEffect(() => {
+    const isAuthPage = ['/sign-in', '/sign-up'].includes(location.pathname);
+    
+    if (isAuthPage) {
+      return; // Let ClerkProvider handle auth page redirects
+    }
+  }, [location.pathname, navigate]);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+        <NotificationProvider>
+          <div className="root-layout">
+            <main className="main-content">
+              <SignedIn>
+                <Outlet />
+              </SignedIn>
+              <SignedOut>
+                {publicRoutes.includes(location.pathname) ? (
+                  <Outlet />
+                ) : (
+                  <Navigate to="/sign-in" replace />
+                )}
+              </SignedOut>
+            </main>
+          </div>
+        </NotificationProvider>
+      </ClerkProvider>
+    </QueryClientProvider>
+  );
+}
+
+// sign-up.js
+export default function SignUpPage() {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const referralCode = searchParams.get('ref');
+  const [signUpError, setSignUpError] = useState(null);
+  
+  const handleSignUpComplete = async (user) => {
+    if (referralCode) {
+      try {
+        const response = await axios.post('http://localhost:5000/api/referrals/record-referral', {
+          referralCode,
+          referredUserId: user.id,
+          userType: 'website_owner',
+          referredUserDetails: {
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.primaryEmailAddress?.emailAddress,
+            createdAt: new Date()
+          }
+        });
+        
+        if (!response.data.success) {
+          setSignUpError('Failed to record referral. Please contact support.');
+        }
+      } catch (error) {
+        console.error('Error recording referral:', error);
+        setSignUpError('An error occurred during signup. Please try again.');
+      }
+    }
+  };
+  
+  return (
+    <SignUp 
+      path="/sign-up"
+      routing="path"
+      signInUrl="/sign-in"
+      redirectUrl="/create-website"
+      appearance={authAppearance}
+      afterSignUpUrl="/create-website"
+      onSignUpComplete={handleSignUpComplete}
+    />
+  );
+}
+
+// components/ReferralDashboard.js
+const ReferralDashboard = () => {
+  const { user } = useClerk();
+  const [referralData, setReferralData] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const loadReferralData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const generateResponse = await axios.post('http://localhost:5000/api/referrals/generate-code', {
+        userId: user.id,
+        userType: 'promoter'
+      });
+      const statsResponse = await axios.get(`http://localhost:5000/api/referrals/stats/${user.id}`);
+      if (statsResponse.data.success) {
+        setReferralData(statsResponse.data.stats);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadReferralData();
+    const pollInterval = setInterval(loadReferralData, 30000);
+    return () => clearInterval(pollInterval);
+  }, [user?.id]);
+
+  const renderReferralList = () => {
+    return referralData.referrals.map((referral, index) => (
+      <div key={index} className="mb-4 border rounded-lg p-4">
+        <div className={`p-4 rounded-lg ${
+          referral.status === 'qualified' ? 'bg-green-50' : 'bg-yellow-50'
+        }`}>
+          {referral.userDetails && (
+            <div className="mt-2 mb-4">
+              <p>{`${referral.userDetails.firstName} ${referral.userDetails.lastName}`}</p>
+            </div>
+          )}
+          <div className="mt-2">
+            {referral.websiteDetails && (
+              <p>{referral.websiteDetails.websiteName}</p>
+            )}
+            {referral.categoryDetails && (
+              <p>{referral.categoryDetails.categoryName}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    ));
+  };
+
+  const getReferralLink = () => {
+    if (!referralData?.code) return '';
+    return `${window.location.origin}/sign-up?ref=${referralData.code}`;
+  };
+
+  const copyReferralLink = async () => {
+    // codes...
+  };
 };
