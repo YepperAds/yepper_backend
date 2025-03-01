@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 const referralSchema = new mongoose.Schema({
   referrerId: { type: String, required: true, index: true },
   referredUserId: { type: String, required: true, unique: true, index: true },
-  referralCode: { type: String, required: true },
-  userType: { type: String, required: true },
+  referralCode: { type: String, required: true, index: true },
+  userType: { type: String, enum: ['website_owner', 'advertiser'], required: true },
   status: { 
     type: String, 
     enum: ['pending', 'website_created', 'category_created', 'qualified'],
@@ -30,7 +30,8 @@ const referralSchema = new mongoose.Schema({
   }],
   createdAt: { type: Date, default: Date.now },
   qualifiedAt: Date,
-  lastUpdated: { type: Date, default: Date.now }
+  lastUpdated: { type: Date, default: Date.now },
+  completionProgress: { type: Number, default: 0 }
 });
 
 referralSchema.index({ referrerId: 1, status: 1 });
