@@ -240,7 +240,7 @@ const ImportAd = require('../models/ImportAdModel');
 
 const generateScriptTag = (categoryId) => {
   return {
-    script: `<script src="http://localhost:5000/api/ads/script/${categoryId}"></script>`
+    script: `<script src="https://yepper-backend.onrender.com/api/ads/script/${categoryId}"></script>`
   };
 };
 
@@ -286,7 +286,7 @@ exports.createCategory = async (req, res) => {
 
     savedCategory.apiCodes = {
       HTML: script,
-      JavaScript: `const script = document.createElement('script');\nscript.src = "http://localhost:5000/api/ads/script/${savedCategory._id}";\ndocument.body.appendChild(script);`,
+      JavaScript: `const script = document.createElement('script');\nscript.src = "https://yepper-backend.onrender.com/api/ads/script/${savedCategory._id}";\ndocument.body.appendChild(script);`,
       PHP: `<?php echo '${script}'; ?>`,
       Python: `print('${script}')`
     };
