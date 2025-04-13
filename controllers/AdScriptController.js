@@ -510,7 +510,7 @@ exports.serveAdScript = async (req, res) => {
           },
           kinyarwanda: {
             title: "Kwamamaza",
-            price: "Igiciro",
+            price: "Igiciro K'ukwezi",
             action: "Kanda Hano"
           },
           kiswahili: {
@@ -558,17 +558,17 @@ exports.serveAdScript = async (req, res) => {
               '<span class="relative z-10 uppercase tracking-wider">' + translations[currentLang].action + '</span>' +
             '</a>' +
             
-            // Language selector
-            '<div class="yepper-ad-language-selector" style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;">' +
-              Object.keys(translations).map(lang => 
-                '<button class="yepper-lang-btn' + (lang === currentLang ? ' yepper-active' : '') + '" ' +
-                'data-lang="' + lang + '" ' +
-                'style="font-size: 10px; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); ' +
-                'background: ' + (lang === currentLang ? 'rgba(255,255,255,0.2)' : 'transparent') + ';">' +
-                lang.charAt(0).toUpperCase() + lang.slice(1) +
-                '</button>'
-              ).join('') +
-            '</div>' +
+            // // Language selector
+            // '<div class="yepper-ad-language-selector" style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;">' +
+            //   Object.keys(translations).map(lang => 
+            //     '<button class="yepper-lang-btn' + (lang === currentLang ? ' yepper-active' : '') + '" ' +
+            //     'data-lang="' + lang + '" ' +
+            //     'style="font-size: 10px; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); ' +
+            //     'background: ' + (lang === currentLang ? 'rgba(255,255,255,0.2)' : 'transparent') + ';">' +
+            //     lang.charAt(0).toUpperCase() + lang.slice(1) +
+            //     '</button>'
+            //   ).join('') +
+            // '</div>' +
           '</div>';
         
         // Add event listeners to language buttons
