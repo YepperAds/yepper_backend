@@ -292,15 +292,14 @@ const AdCategory = require('../models/AdCategoryModel');
 exports.serveAdScript = async (req, res) => {
   try {
     const { scriptId } = req.params;
-    
-    // Verify this is a valid category ID and get the price immediately
     const adCategory = await AdCategory.findById(scriptId);
+    const categoryPrice = adCategory.price;
+    const defaultLanguage = adCategory.defaultLanguage || 'english'; // Use the saved default language
+
+    // Verify this is a valid category ID and get the price immediately
     if (!adCategory) {
       return res.status(404).send('// Script not found');
     }
-    
-    // Extract the price to include directly in the script
-    const categoryPrice = adCategory.price;
     
     // Set proper content type and cache headers
     res.setHeader('Content-Type', 'application/javascript');
@@ -313,11 +312,12 @@ exports.serveAdScript = async (req, res) => {
     
     (function() {
       const d = document,
-            _i = "${scriptId}",
-            _b = "https://yepper-backend.onrender.com/api",
-            _t = 5000,
-            _p = ${categoryPrice}; // Include price directly in the script
-      
+        _i = "${scriptId}",
+        _b = "https://yepper-backend.onrender.com/api",
+        _t = 5000,
+        _p = ${categoryPrice}, // Include price directly in the script
+        _l = "${defaultLanguage}"; // Default language from the database
+    
       // Create and append styles
       const styles = \`
         .yepper-ad-wrapper {
@@ -530,17 +530,23 @@ exports.serveAdScript = async (req, res) => {
           }
         };
         
-        // Language detection (simplified version - you could add more sophisticated detection)
-        let userLang = navigator.language || navigator.userLanguage;
-        userLang = userLang.toLowerCase().split('-')[0];
+        // Use the default language from the database first
+        let currentLang = _l;
         
-        // Map browser language to our translations
-        let currentLang = 'english'; // Default
-        if (userLang === 'fr') currentLang = 'french';
-        if (userLang === 'rw') currentLang = 'kinyarwanda';
-        if (userLang === 'sw') currentLang = 'kiswahili';
-        if (userLang === 'zh') currentLang = 'chinese';
-        if (userLang === 'es') currentLang = 'spanish';
+        // If browser detection is still desired as a fallback (when _l is not valid)
+        if (!translations[currentLang]) {
+          // Language detection (simplified version)
+          let userLang = navigator.language || navigator.userLanguage;
+          userLang = userLang.toLowerCase().split('-')[0];
+          
+          // Map browser language to our translations
+          currentLang = 'english'; // Default fallback
+          if (userLang === 'fr') currentLang = 'french';
+          if (userLang === 'rw') currentLang = 'kinyarwanda';
+          if (userLang === 'sw') currentLang = 'kiswahili';
+          if (userLang === 'zh') currentLang = 'chinese';
+          if (userLang === 'es') currentLang = 'spanish';
+        }
         
         // Create HTML for the empty state
         container.innerHTML = 

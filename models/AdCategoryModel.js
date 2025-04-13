@@ -10,6 +10,11 @@ const adCategorySchema = new mongoose.Schema({
   spaceType: { type: String, required: true },
   userCount: { type: Number, default: 0 },
   instructions: { type: String },
+  defaultLanguage: { 
+    type: String, 
+    enum: ['english', 'french', 'kinyarwanda', 'kiswahili', 'chinese', 'spanish'],
+    default: 'english' 
+  },
   customAttributes: { type: Map, of: String },
   apiCodes: {
     HTML: { type: String },
