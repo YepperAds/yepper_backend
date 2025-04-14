@@ -413,7 +413,6 @@
 
 
 
-
 // AdScriptController.js
 const AdCategory = require('../models/AdCategoryModel');
 
@@ -502,68 +501,33 @@ exports.serveAdScript = async (req, res) => {
           gap: 16px;
           transition: all 0.5s;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          min-height: 180px;
-          aspect-ratio: 16/9;
         }
         .yepper-ad-empty:hover {
           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
         }
         .yepper-ad-empty-title {
-          font-size: clamp(16px, 3vw, 28px);
-          font-weight: 700;
+          font-size: 18px;
+          font-weight: bold;
           margin-bottom: 8px;
           opacity: 0.9;
           letter-spacing: 0.02em;
-          line-height: 1.2;
-          text-transform: uppercase;
-          width: 100%;
-          max-width: 80%;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
-          position: relative;
-          overflow: hidden;
-        }
-        .yepper-ad-empty-title h3 {
-          margin: 0;
-          padding: 0;
-          display: inline-block;
-          position: relative;
-        }
-        .yepper-ad-empty-title h3:after {
-          content: '';
-          position: absolute;
-          bottom: -4px;
-          left: 0;
-          width: 100%;
-          height: 2px;
-          background: currentColor;
-          opacity: 0.3;
-          transform: scaleX(0);
-          transition: transform 0.3s ease-out;
-          transform-origin: left;
-        }
-        .yepper-ad-empty:hover .yepper-ad-empty-title h3:after {
-          transform: scaleX(1);
         }
         .yepper-ad-empty-text {
-          font-size: clamp(14px, 2.5vw, 22px);
-          font-weight: 600;
+          font-size: 16px;
+          font-weight: bold;
           margin-bottom: 16px;
           opacity: 0.7;
-          transition: opacity 0.3s ease;
-        }
-        .yepper-ad-empty:hover .yepper-ad-empty-text {
-          opacity: 0.9;
         }
         .yepper-ad-empty-link {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          padding: clamp(10px, 1.5vw, 16px) clamp(24px, 3vw, 32px);
+          padding: 10px 24px;
           background: rgba(80, 80, 80, 0.25);
           color: inherit;
           text-decoration: none;
           border-radius: 12px;
-          font-size: clamp(14px, 1.5vw, 16px);
+          font-size: 14px;
           font-weight: 500;
           letter-spacing: 0.05em;
           transition: all 0.3s;
@@ -575,10 +539,6 @@ exports.serveAdScript = async (req, res) => {
         .yepper-ad-empty-link:hover {
           background: rgba(100, 100, 100, 0.35);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          transform: translateY(-2px);
-        }
-        .yepper-ad-empty-link:active {
-          transform: translateY(0);
         }
         .yepper-lang-btn {
           cursor: pointer;
@@ -591,26 +551,6 @@ exports.serveAdScript = async (req, res) => {
         .yepper-lang-btn.yepper-active {
           opacity: 1;
           font-weight: bold;
-        }
-        
-        @media (max-width: 480px) {
-          .yepper-ad-empty {
-            padding: 16px;
-            gap: 12px;
-            min-height: 140px;
-          }
-        }
-        
-        @media (min-width: 481px) and (max-width: 768px) {
-          .yepper-ad-empty {
-            min-height: 160px;
-          }
-        }
-        
-        @media (min-width: 769px) {
-          .yepper-ad-empty {
-            padding: 24px;
-          }
         }
         
         /* Dark mode detection and adaptations */
@@ -778,42 +718,6 @@ exports.serveAdScript = async (req, res) => {
             e.target.classList.add('yepper-active');
           });
         });
-        
-        // Add resize detection for optimal display
-        const resizeObserver = new ResizeObserver(entries => {
-          for (let entry of entries) {
-            const width = entry.contentRect.width;
-            const container = entry.target;
-            const title = container.querySelector('.yepper-ad-empty-title');
-            const text = container.querySelector('.yepper-ad-empty-text');
-            const link = container.querySelector('.yepper-ad-empty-link');
-            
-            // Adjust styles based on container width
-            if (width < 200) {
-              title.style.fontSize = 'clamp(14px, 5vw, 16px)';
-              text.style.fontSize = 'clamp(12px, 4vw, 14px)';
-              link.style.padding = '8px 16px';
-              link.style.fontSize = '12px';
-            } else if (width >= 200 && width < 400) {
-              title.style.fontSize = 'clamp(16px, 4vw, 20px)';
-              text.style.fontSize = 'clamp(14px, 3vw, 16px)';
-              link.style.padding = '10px 20px';
-              link.style.fontSize = '14px';
-            } else {
-              // Reset to default from CSS
-              title.style.fontSize = '';
-              text.style.fontSize = '';
-              link.style.padding = '';
-              link.style.fontSize = '';
-            }
-          }
-        });
-        
-        // Observe the empty ad container
-        const emptyAdContainer = container.querySelector('.yepper-ad-empty');
-        if (emptyAdContainer && window.ResizeObserver) {
-          resizeObserver.observe(emptyAdContainer);
-        }
       };
       
       // Insert container for ads
