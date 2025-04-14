@@ -510,7 +510,7 @@ exports.serveAdScript = async (req, res) => {
           },
           kinyarwanda: {
             title: "Kwamamaza",
-            price: "Igiciro K'ukwezi",
+            price: "Igiciro cy'ukwezi",
             action: "Kanda Hano"
           },
           kiswahili: {
