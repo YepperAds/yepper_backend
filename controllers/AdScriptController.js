@@ -1,13 +1,24 @@
-// // AdScriptController.js
-// const AdCategory = require('../models/AdCategoryModel');
+// AdScriptController.js
+
+const AdCategory = require('../models/AdCategoryModel');
 
 // exports.serveAdScript = async (req, res) => {
 //   try {
 //     const { scriptId } = req.params;
-//     const adCategory = await AdCategory.findById(scriptId);
+//     const adCategory = await AdCategory.findById(scriptId)
+//       .populate('websiteId')
+//       .lean();
+    
+//     if (!adCategory) {
+//       return res.status(404).send('Ad category not found');
+//     }
+    
 //     const categoryPrice = adCategory.price;
-//     const defaultLanguage = adCategory.defaultLanguage || 'english'; // Use the saved default language
-
+//     const defaultLanguage = adCategory.defaultLanguage || 'english';
+//     const websiteId = adCategory.websiteId._id;
+//     const websiteName = adCategory.websiteId.websiteName || 'This website';
+//     const categoryName = adCategory.categoryName || 'this space';
+    
 //     // Verify this is a valid category ID and get the price immediately
 //     if (!adCategory) {
 //       return res.status(404).send('// Script not found');
@@ -25,10 +36,13 @@
 //     (function() {
 //       const d = document,
 //         _i = "${scriptId}",
+//         _w = "${websiteId}",
+//         _wName = "${websiteName}",
+//         _cName = "${categoryName}",
 //         _b = "https://yepper-backend.onrender.com/api",
 //         _t = 5000,
-//         _p = ${categoryPrice}, // Include price directly in the script
-//         _l = "${defaultLanguage}"; // Default language from the database
+//         _p = ${categoryPrice},
+//         _l = "${defaultLanguage}";
     
 //       // Create and append styles
 //       const styles = \`
@@ -91,7 +105,7 @@
 //           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 //         }
 //         .yepper-ad-empty-title {
-//           font-size: 16px;
+//           font-size: 18px;
 //           font-weight: bold;
 //           margin-bottom: 8px;
 //           opacity: 0.9;
@@ -265,7 +279,7 @@
 //           '<div class="yepper-ad-empty backdrop-blur-md bg-gradient-to-b from-gray-800/30 to-gray-900/10 rounded-xl overflow-hidden border border-gray-200/20 transition-all duration-300">' +
 //             '<div class="yepper-ad-empty-title font-bold tracking-wide"><h3>' + translations[currentLang].title + '</h3></div>' +
 //             '<div class="yepper-ad-empty-text"><p>' + translations[currentLang].price + ' $' + _p + '</p></div>' +
-//             '<a href="https://yepper.cc/select" class="yepper-ad-empty-link group relative overflow-hidden transition-all duration-300">' +
+//             '<a href="https://yepper.cc/direct-ad?websiteId=' + _w + '&categoryId=' + _i + '" class="yepper-ad-empty-link group relative overflow-hidden transition-all duration-300">' +
 //               '<div class="absolute inset-0 bg-gray-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>' +
 //               '<span class="relative z-10 uppercase tracking-wider">' + translations[currentLang].action + '</span>' +
 //             '</a>' +
@@ -316,9 +330,7 @@
 //             showEmptyState(container);
 //             return;
 //           }
-          
 //           container.innerHTML = data.html;
-          
 //           const items = Array.from(container.getElementsByClassName("yepper-ad-item"));
           
 //           if (!items.length) {
@@ -395,28 +407,6 @@
 //   }
 // };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// AdScriptController.js
-
-const AdCategory = require('../models/AdCategoryModel');
-
 exports.serveAdScript = async (req, res) => {
   try {
     const { scriptId } = req.params;
@@ -466,39 +456,222 @@ exports.serveAdScript = async (req, res) => {
           max-width: 100%;
           overflow: hidden;
           box-sizing: border-box;
+          margin: 16px 0;
         }
         .yepper-ad-container {
           width: 100%;
           margin: 0 auto;
-          border-radius: 8px;
+          border-radius: 12px;
           overflow: hidden;
         }
+        
+        /* Default Ad Design Styles */
         .yepper-ad-item {
           display: block;
           width: 100%;
           text-decoration: none;
           overflow: hidden;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s ease;
+          position: relative;
         }
+        
+        .yepper-ad-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+          border-color: #cbd5e1;
+        }
+        
         .yepper-ad-link {
           display: block;
           color: inherit;
           text-decoration: none;
+          height: 100%;
         }
+        
+        .yepper-ad-header {
+          background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+          color: white;
+          padding: 8px 16px;
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        
+        .yepper-ad-header-logo {
+          font-weight: 700;
+          font-size: 13px;
+        }
+        
+        .yepper-ad-header-badge {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 10px;
+          font-weight: 500;
+        }
+        
+        .yepper-ad-content {
+          padding: 16px;
+        }
+        
         .yepper-ad-image-wrapper {
           width: 100%;
           overflow: hidden;
           position: relative;
-          border-radius: 6px;
+          border-radius: 8px;
+          margin-bottom: 12px;
+          background: #f1f5f9;
         }
+        
         .yepper-ad-image {
           width: 100%;
           height: auto;
+          max-height: 200px;
+          object-fit: cover;
           display: block;
           transition: transform 0.3s ease;
         }
-        .yepper-ad-text {
-          
+        
+        .yepper-ad-item:hover .yepper-ad-image {
+          transform: scale(1.02);
         }
+        
+        .yepper-ad-business-name {
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0 0 8px 0;
+          line-height: 1.3;
+        }
+        
+        .yepper-ad-description {
+          font-size: 14px;
+          color: #64748b;
+          line-height: 1.5;
+          margin: 0 0 12px 0;
+        }
+        
+        .yepper-ad-cta {
+          display: inline-flex;
+          align-items: center;
+          background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          transition: all 0.2s ease;
+          border: none;
+        }
+        
+        .yepper-ad-cta:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .yepper-ad-footer {
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+          padding: 10px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 11px;
+          color: #64748b;
+        }
+        
+        .yepper-ad-footer-brand {
+          font-weight: 600;
+          color: #475569;
+        }
+        
+        .yepper-ad-footer-business {
+          font-style: italic;
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+          .yepper-ad-item {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-color: #475569;
+          }
+          
+          .yepper-ad-business-name {
+            color: #f1f5f9;
+          }
+          
+          .yepper-ad-description {
+            color: #94a3b8;
+          }
+          
+          .yepper-ad-footer {
+            background: #0f172a;
+            border-color: #334155;
+          }
+          
+          .yepper-ad-footer-brand {
+            color: #cbd5e1;
+          }
+          
+          .yepper-ad-footer-business {
+            color: #94a3b8;
+          }
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+          .yepper-ad-wrapper {
+            margin: 12px 0;
+          }
+          
+          .yepper-ad-content {
+            padding: 12px;
+          }
+          
+          .yepper-ad-business-name {
+            font-size: 16px;
+          }
+          
+          .yepper-ad-description {
+            font-size: 13px;
+          }
+          
+          .yepper-ad-header {
+            padding: 6px 12px;
+            font-size: 11px;
+          }
+          
+          .yepper-ad-footer {
+            padding: 8px 12px;
+            font-size: 10px;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .yepper-ad-image {
+            max-height: 150px;
+          }
+          
+          .yepper-ad-business-name {
+            font-size: 15px;
+          }
+          
+          .yepper-ad-description {
+            font-size: 12px;
+          }
+        }
+        
+        /* Empty state styles (unchanged) */
         .yepper-ad-empty {
           padding: 20px;
           text-align: center;
@@ -554,20 +727,8 @@ exports.serveAdScript = async (req, res) => {
           background: rgba(100, 100, 100, 0.35);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
-        .yepper-lang-btn {
-          cursor: pointer;
-          transition: all 0.2s;
-          opacity: 0.7;
-        }
-        .yepper-lang-btn:hover {
-          opacity: 1;
-        }
-        .yepper-lang-btn.yepper-active {
-          opacity: 1;
-          font-weight: bold;
-        }
         
-        /* Dark mode detection and adaptations */
+        /* Dark mode for empty state */
         @media (prefers-color-scheme: dark) {
           .yepper-ad-empty {
             background-color: rgba(30, 30, 30, 0.6);
@@ -582,7 +743,7 @@ exports.serveAdScript = async (req, res) => {
           }
         }
         
-        /* Light mode detection and adaptations */
+        /* Light mode for empty state */
         @media (prefers-color-scheme: light) {
           .yepper-ad-empty {
             background-color: rgba(250, 250, 250, 0.7);
@@ -698,40 +859,7 @@ exports.serveAdScript = async (req, res) => {
               '<div class="absolute inset-0 bg-gray-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>' +
               '<span class="relative z-10 uppercase tracking-wider">' + translations[currentLang].action + '</span>' +
             '</a>' +
-            
-            // // Language selector
-            // '<div class="yepper-ad-language-selector" style="margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;">' +
-            //   Object.keys(translations).map(lang => 
-            //     '<button class="yepper-lang-btn' + (lang === currentLang ? ' yepper-active' : '') + '" ' +
-            //     'data-lang="' + lang + '" ' +
-            //     'style="font-size: 10px; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); ' +
-            //     'background: ' + (lang === currentLang ? 'rgba(255,255,255,0.2)' : 'transparent') + ';">' +
-            //     lang.charAt(0).toUpperCase() + lang.slice(1) +
-            //     '</button>'
-            //   ).join('') +
-            // '</div>' +
           '</div>';
-        
-        // Add event listeners to language buttons
-        const langButtons = container.querySelectorAll('.yepper-lang-btn');
-        langButtons.forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const selectedLang = e.target.dataset.lang;
-            
-            // Update title, price and action button
-            container.querySelector('.yepper-ad-empty-title h3').textContent = translations[selectedLang].title;
-            container.querySelector('.yepper-ad-empty-text p').textContent = translations[selectedLang].price + ' $' + _p;
-            container.querySelector('.yepper-ad-empty-link span').textContent = translations[selectedLang].action;
-            
-            // Update active button styling
-            langButtons.forEach(b => {
-              b.style.background = 'transparent';
-              b.classList.remove('yepper-active');
-            });
-            e.target.style.background = 'rgba(255,255,255,0.2)';
-            e.target.classList.add('yepper-active');
-          });
-        });
       };
       
       // Insert container for ads
