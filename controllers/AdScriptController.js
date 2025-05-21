@@ -466,25 +466,28 @@ exports.serveAdScript = async (req, res) => {
           overflow: hidden;
         }
         
-        /* Modern Adaptive Ad Design */
+        /* Glass Morphism Ad Design */
         .yepper-ad-item {
           display: block;
           width: 100%;
           text-decoration: none;
           overflow: hidden;
-          background: #fefefe;
-          border: 1px solid rgba(0, 0, 0, 0.08);
-          border-radius: 8px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          background: rgba(255, 255, 255, 0.25);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          border-radius: 16px;
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
           color: inherit;
         }
         
         .yepper-ad-item:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          border-color: rgba(0, 0, 0, 0.12);
+          transform: translateY(-2px);
+          box-shadow: 0 15px 35px 0 rgba(31, 38, 135, 0.4);
+          border-color: rgba(255, 255, 255, 0.3);
+          background: rgba(255, 255, 255, 0.35);
         }
         
         .yepper-ad-link {
@@ -495,46 +498,52 @@ exports.serveAdScript = async (req, res) => {
         }
         
         .yepper-ad-header {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 6px 14px;
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          color: rgba(0, 0, 0, 0.8);
+          padding: 8px 16px;
           font-size: 11px;
           font-weight: 500;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          min-height: 28px;
+          min-height: 32px;
           letter-spacing: 0.01em;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .yepper-ad-header-logo {
           font-weight: 600;
           font-size: 11px;
-          opacity: 0.95;
+          opacity: 0.7;
         }
         
         .yepper-ad-header-badge {
           background: rgba(255, 255, 255, 0.2);
-          padding: 2px 8px;
-          border-radius: 10px;
+          padding: 3px 8px;
+          border-radius: 12px;
           font-size: 9px;
           font-weight: 500;
           backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .yepper-ad-content {
-          padding: 16px;
-          background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+          padding: 18px;
+          background: transparent;
         }
         
         .yepper-ad-image-wrapper {
           width: 100%;
           overflow: hidden;
           position: relative;
-          border-radius: 6px;
-          margin-bottom: 12px;
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          border-radius: 12px;
+          margin-bottom: 16px;
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(5px);
           min-height: 140px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .yepper-ad-image {
@@ -545,19 +554,18 @@ exports.serveAdScript = async (req, res) => {
           object-fit: cover;
           display: block;
           transition: transform 0.3s ease;
-          filter: saturate(1.1) contrast(1.02);
+          border-radius: 11px;
         }
         
         .yepper-ad-item:hover .yepper-ad-image {
-          transform: scale(1.01);
-          filter: saturate(1.15) contrast(1.05);
+          transform: scale(1.02);
         }
         
         .yepper-ad-business-name {
           font-size: 16px;
           font-weight: 600;
-          color: #2d3748;
-          margin: 0 0 8px 0;
+          color: rgba(0, 0, 0, 0.9);
+          margin: 0 0 10px 0;
           line-height: 1.3;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -568,53 +576,53 @@ exports.serveAdScript = async (req, res) => {
         
         .yepper-ad-description {
           font-size: 13px;
-          color: #4a5568;
+          color: rgba(0, 0, 0, 0.6);
           line-height: 1.5;
-          margin: 0 0 14px 0;
+          margin: 0 0 16px 0;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-          opacity: 0.9;
         }
         
         .yepper-ad-cta {
           display: inline-flex;
           align-items: center;
-          background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          color: rgba(0, 0, 0, 0.8);
+          padding: 10px 18px;
+          border-radius: 10px;
           font-size: 12px;
           font-weight: 500;
           letter-spacing: 0.01em;
-          transition: all 0.2s ease;
-          border: none;
-          box-shadow: 0 2px 4px rgba(79, 172, 254, 0.2);
+          transition: all 0.3s ease;
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .yepper-ad-cta:hover {
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
-          background: linear-gradient(135deg, #4facfe 0%, #00d4fe 100%);
+          background: rgba(255, 255, 255, 0.3);
+          border-color: rgba(255, 255, 255, 0.3);
         }
         
         .yepper-ad-footer {
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-          border-top: 1px solid rgba(0, 0, 0, 0.06);
-          padding: 8px 14px;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          padding: 10px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           font-size: 10px;
-          color: #64748b;
-          min-height: 24px;
+          color: rgba(0, 0, 0, 0.5);
+          min-height: 28px;
         }
         
         .yepper-ad-footer-brand {
           font-weight: 500;
-          color: #475569;
-          opacity: 0.8;
+          color: rgba(0, 0, 0, 0.4);
         }
         
         .yepper-ad-footer-business {
@@ -623,53 +631,69 @@ exports.serveAdScript = async (req, res) => {
           overflow: hidden;
           text-overflow: ellipsis;
           max-width: 140px;
-          opacity: 0.7;
+          color: rgba(0, 0, 0, 0.3);
         }
         
         /* Dark theme adaptation */
         @media (prefers-color-scheme: dark) {
           .yepper-ad-item {
-            background: #1a202c;
-            border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.25);
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
           }
           
           .yepper-ad-item:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-          }
-          
-          .yepper-ad-content {
-            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            background: rgba(0, 0, 0, 0.35);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 15px 35px 0 rgba(0, 0, 0, 0.5);
           }
           
           .yepper-ad-header {
-            background: linear-gradient(135deg, #4c51bf 0%, #553c9a 100%);
+            background: rgba(0, 0, 0, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+          }
+          
+          .yepper-ad-header-badge {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.1);
           }
           
           .yepper-ad-business-name {
-            color: #e2e8f0;
+            color: rgba(255, 255, 255, 0.95);
           }
           
           .yepper-ad-description {
-            color: #a0aec0;
+            color: rgba(255, 255, 255, 0.7);
           }
           
           .yepper-ad-image-wrapper {
-            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            background: rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 255, 255, 0.1);
+          }
+          
+          .yepper-ad-cta {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+          }
+          
+          .yepper-ad-cta:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
           }
           
           .yepper-ad-footer {
-            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-            border-color: rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
           }
           
           .yepper-ad-footer-brand {
-            color: #cbd5e1;
+            color: rgba(255, 255, 255, 0.5);
           }
           
           .yepper-ad-footer-business {
-            color: #a0aec0;
+            color: rgba(255, 255, 255, 0.4);
           }
         }
         
