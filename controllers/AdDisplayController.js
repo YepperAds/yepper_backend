@@ -132,9 +132,9 @@ exports.displayAd = async (req, res) => {
                             ad.productDescription || 
                             `Visit ${ad.businessName} for great products and services.`;
           
-          // Truncate description if too long
-          const shortDescription = description.length > 100 ? 
-            description.substring(0, 100) + '...' : description;
+          // Truncate description based on container size - more aggressive for small spaces
+          const shortDescription = description.length > 80 ? 
+            description.substring(0, 80) + '...' : description;
 
           // Add data attributes for tracking with new design
           return `

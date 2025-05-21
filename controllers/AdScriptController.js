@@ -495,46 +495,49 @@ exports.serveAdScript = async (req, res) => {
         .yepper-ad-header {
           background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
           color: white;
-          padding: 8px 16px;
-          font-size: 12px;
+          padding: 4px 12px;
+          font-size: 10px;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.3px;
           display: flex;
           align-items: center;
           justify-content: space-between;
+          min-height: 24px;
         }
         
         .yepper-ad-header-logo {
           font-weight: 700;
-          font-size: 13px;
+          font-size: 10px;
         }
         
         .yepper-ad-header-badge {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 10px;
+          background: rgba(255, 255, 255, 0.25);
+          padding: 1px 6px;
+          border-radius: 8px;
+          font-size: 8px;
           font-weight: 500;
         }
         
         .yepper-ad-content {
-          padding: 16px;
+          padding: 12px;
         }
         
         .yepper-ad-image-wrapper {
           width: 100%;
           overflow: hidden;
           position: relative;
-          border-radius: 8px;
-          margin-bottom: 12px;
+          border-radius: 6px;
+          margin-bottom: 8px;
           background: #f1f5f9;
+          min-height: 120px;
         }
         
         .yepper-ad-image {
           width: 100%;
           height: auto;
-          max-height: 200px;
+          min-height: 120px;
+          max-height: 160px;
           object-fit: cover;
           display: block;
           transition: transform 0.3s ease;
@@ -545,18 +548,26 @@ exports.serveAdScript = async (req, res) => {
         }
         
         .yepper-ad-business-name {
-          font-size: 18px;
+          font-size: 15px;
           font-weight: 700;
           color: #1e293b;
-          margin: 0 0 8px 0;
-          line-height: 1.3;
+          margin: 0 0 6px 0;
+          line-height: 1.2;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         
         .yepper-ad-description {
-          font-size: 14px;
+          font-size: 12px;
           color: #64748b;
-          line-height: 1.5;
-          margin: 0 0 12px 0;
+          line-height: 1.4;
+          margin: 0 0 10px 0;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
         
         .yepper-ad-cta {
@@ -564,30 +575,31 @@ exports.serveAdScript = async (req, res) => {
           align-items: center;
           background: linear-gradient(90deg, #10b981 0%, #059669 100%);
           color: white;
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-size: 13px;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 11px;
           font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.3px;
+          letter-spacing: 0.2px;
           transition: all 0.2s ease;
           border: none;
         }
         
         .yepper-ad-cta:hover {
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+          box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
         }
         
         .yepper-ad-footer {
           background: #f8fafc;
           border-top: 1px solid #e2e8f0;
-          padding: 10px 16px;
+          padding: 6px 12px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          font-size: 11px;
+          font-size: 9px;
           color: #64748b;
+          min-height: 20px;
         }
         
         .yepper-ad-footer-brand {
@@ -597,6 +609,10 @@ exports.serveAdScript = async (req, res) => {
         
         .yepper-ad-footer-business {
           font-style: italic;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 120px;
         }
         
         /* Dark mode support */
@@ -631,43 +647,140 @@ exports.serveAdScript = async (req, res) => {
         /* Responsive design */
         @media (max-width: 768px) {
           .yepper-ad-wrapper {
-            margin: 12px 0;
+            margin: 8px 0;
           }
           
           .yepper-ad-content {
-            padding: 12px;
+            padding: 10px;
           }
           
           .yepper-ad-business-name {
-            font-size: 16px;
+            font-size: 14px;
           }
           
           .yepper-ad-description {
-            font-size: 13px;
-          }
-          
-          .yepper-ad-header {
-            padding: 6px 12px;
             font-size: 11px;
           }
           
+          .yepper-ad-header {
+            padding: 3px 10px;
+            font-size: 9px;
+            min-height: 20px;
+          }
+          
+          .yepper-ad-header-logo {
+            font-size: 9px;
+          }
+          
+          .yepper-ad-header-badge {
+            font-size: 7px;
+            padding: 1px 4px;
+          }
+          
           .yepper-ad-footer {
-            padding: 8px 12px;
+            padding: 5px 10px;
+            font-size: 8px;
+            min-height: 18px;
+          }
+          
+          .yepper-ad-cta {
+            padding: 5px 10px;
             font-size: 10px;
           }
         }
         
         @media (max-width: 480px) {
           .yepper-ad-image {
-            max-height: 150px;
+            min-height: 100px;
+            max-height: 120px;
           }
           
           .yepper-ad-business-name {
-            font-size: 15px;
+            font-size: 13px;
           }
           
           .yepper-ad-description {
+            font-size: 10px;
+          }
+          
+          .yepper-ad-header {
+            padding: 2px 8px;
+            font-size: 8px;
+            min-height: 18px;
+          }
+          
+          .yepper-ad-header-logo {
+            font-size: 8px;
+          }
+          
+          .yepper-ad-header-badge {
+            font-size: 6px;
+            padding: 1px 3px;
+          }
+          
+          .yepper-ad-footer {
+            padding: 4px 8px;
+            font-size: 7px;
+            min-height: 16px;
+          }
+          
+          .yepper-ad-footer-business {
+            max-width: 80px;
+          }
+        }
+        
+        /* Ultra small containers */
+        @media (max-width: 300px) {
+          .yepper-ad-wrapper {
+            margin: 4px 0;
+          }
+          
+          .yepper-ad-content {
+            padding: 8px;
+          }
+          
+          .yepper-ad-image {
+            min-height: 80px;
+            max-height: 100px;
+          }
+          
+          .yepper-ad-business-name {
             font-size: 12px;
+            -webkit-line-clamp: 1;
+          }
+          
+          .yepper-ad-description {
+            font-size: 9px;
+            -webkit-line-clamp: 1;
+          }
+          
+          .yepper-ad-header {
+            padding: 2px 6px;
+            font-size: 7px;
+            min-height: 16px;
+          }
+          
+          .yepper-ad-header-logo {
+            font-size: 7px;
+          }
+          
+          .yepper-ad-header-badge {
+            display: none;
+          }
+          
+          .yepper-ad-footer {
+            padding: 3px 6px;
+            font-size: 6px;
+            min-height: 14px;
+          }
+          
+          .yepper-ad-footer-business {
+            max-width: 60px;
+          }
+          
+          .yepper-ad-cta {
+            padding: 4px 8px;
+            font-size: 9px;
           }
         }
         
