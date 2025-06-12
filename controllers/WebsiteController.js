@@ -422,15 +422,20 @@ exports.updateWebsiteName = async (req, res) => {
 
 exports.getAllWebsites = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
+  const currentUserEmail = req.query.userEmail || req.headers['x-user-email']; // Get current user email
+  
   try {
-    // Define test account identifier - you can use email or userId
     const TEST_ACCOUNT_EMAIL = 'olympusexperts@gmail.com';
     
-    // Filter out websites created by the test account
-    // Assuming ownerId contains the email or you have a way to identify the test account
-    const websites = await Website.find({
-      ownerId: { $ne: TEST_ACCOUNT_EMAIL } // Exclude test account
-    })
+    let query = {};
+    
+    // If current user is NOT the test account, exclude test account websites
+    if (currentUserEmail !== TEST_ACCOUNT_EMAIL) {
+      query.ownerId = { $ne: TEST_ACCOUNT_EMAIL };
+    }
+    // If current user IS the test account, show all websites (including their own)
+    
+    const websites = await Website.find(query)
       .lean()
       .select('ownerId websiteName websiteLink imageUrl createdAt');
 
