@@ -405,17 +405,38 @@ exports.updateWebsiteName = async (req, res) => {
   }
 };
 
+// exports.getAllWebsites = async (req, res) => {
+//   const { page = 1, limit = 10 } = req.query;  // Pagination parameters
+//   try {
+//     const websites = await Website.find()
+//       .lean()  // Use lean for performance
+//       .select('ownerId websiteName websiteLink imageUrl createdAt')  // Fetch only necessary fields
+//       // .skip((page - 1) * limit)
+//       // .limit(parseInt(limit));
+
+//     res.status(200).json(websites);
+//   } catch (error) {
+//     res.status(500).json({ message: 'Failed to fetch websites', error });
+//   }
+// };
+
 exports.getAllWebsites = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;  // Pagination parameters
+  const { page = 1, limit = 10 } = req.query;
   try {
-    const websites = await Website.find()
-      .lean()  // Use lean for performance
-      .select('ownerId websiteName websiteLink imageUrl createdAt')  // Fetch only necessary fields
-      // .skip((page - 1) * limit)
-      // .limit(parseInt(limit));
+    // Define test account identifier - you can use email or userId
+    const TEST_ACCOUNT_EMAIL = 'olympusexperts@gmail.com';
+    
+    // Filter out websites created by the test account
+    // Assuming ownerId contains the email or you have a way to identify the test account
+    const websites = await Website.find({
+      ownerId: { $ne: TEST_ACCOUNT_EMAIL } // Exclude test account
+    })
+      .lean()
+      .select('ownerId websiteName websiteLink imageUrl createdAt');
 
     res.status(200).json(websites);
   } catch (error) {
+    console.error('Error fetching websites:', error);
     res.status(500).json({ message: 'Failed to fetch websites', error });
   }
 };
