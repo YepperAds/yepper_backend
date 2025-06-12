@@ -420,11 +420,20 @@ exports.updateWebsiteName = async (req, res) => {
 //   }
 // };
 
+// WebsiteController.js - Fixed getAllWebsites method
 exports.getAllWebsites = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  const currentUserEmail = req.query.userEmail || req.headers['x-user-email']; // Get current user email
-  
   try {
+    // Get current user email from query parameter
+    const currentUserEmail = req.query.userEmail;
+    
+    console.log('Current user email:', currentUserEmail);
+    
+    if (!currentUserEmail) {
+      return res.status(400).json({ 
+        message: 'User email is required' 
+      });
+    }
+
     const TEST_ACCOUNT_EMAIL = 'olympusexperts@gmail.com';
     
     let query = {};
@@ -432,17 +441,28 @@ exports.getAllWebsites = async (req, res) => {
     // If current user is NOT the test account, exclude test account websites
     if (currentUserEmail !== TEST_ACCOUNT_EMAIL) {
       query.ownerId = { $ne: TEST_ACCOUNT_EMAIL };
+      console.log('Non-test user - excluding test websites');
+    } else {
+      console.log('Test user - showing all websites');
+      // If current user IS the test account, show all websites (no filter)
     }
-    // If current user IS the test account, show all websites (including their own)
+    
+    console.log('Query being used:', query);
     
     const websites = await Website.find(query)
       .lean()
-      .select('ownerId websiteName websiteLink imageUrl createdAt');
+      .select('ownerId websiteName websiteLink imageUrl createdAt')
+      .sort({ createdAt: -1 }); // Sort by newest first
 
+    console.log('Websites found:', websites.length);
+    
     res.status(200).json(websites);
   } catch (error) {
     console.error('Error fetching websites:', error);
-    res.status(500).json({ message: 'Failed to fetch websites', error });
+    res.status(500).json({ 
+      message: 'Failed to fetch websites', 
+      error: error.message 
+    });
   }
 };
 
