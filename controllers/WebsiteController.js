@@ -423,14 +423,14 @@ exports.updateWebsiteName = async (req, res) => {
 // WebsiteController.js - Fixed getAllWebsites method
 exports.getAllWebsites = async (req, res) => {
   try {
-    // Get current user email from query parameter
-    const currentUserEmail = req.query.userEmail;
+    // Get user email from the authenticated request (set by middleware)
+    const currentUserEmail = req.userEmail;
     
-    console.log('Current user email:', currentUserEmail);
+    console.log('Current user email from auth:', currentUserEmail);
     
     if (!currentUserEmail) {
-      return res.status(400).json({ 
-        message: 'User email is required' 
+      return res.status(401).json({ 
+        message: 'User authentication required' 
       });
     }
 
@@ -451,7 +451,7 @@ exports.getAllWebsites = async (req, res) => {
     
     const websites = await Website.find(query)
       .lean()
-      .select('ownerId websiteName websiteLink imageUrl createdAt')
+      .select('ownerId websiteName websiteLink imageUrl createdAt category')
       .sort({ createdAt: -1 }); // Sort by newest first
 
     console.log('Websites found:', websites.length);
