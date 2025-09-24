@@ -19,10 +19,31 @@ const withdrawalRoutes = require('./AdPromoter/routes/withdrawalRoutes');
 
 // AdOwner.js
 const webAdvertiseRoutes = require('./AdOwner/routes/WebAdvertiseRoutes');
-// const test = require('./AdOwner/routes/test');
 
 const app = express();
 
+const keepWarm = () => {
+  const url = `https://yepper-backend.onrender.com/api/health`;
+  
+  setInterval(async () => {
+    try {
+      const response = await fetch(url);
+      console.log(`Keep warm ping: ${response.status}`);
+    } catch (error) {
+      console.log('Keep warm ping failed:', error.message);
+    }
+  }, 14 * 60 * 1000); // Ping every 14 minutes (Render sleeps after 15 min of inactivity)
+};
+
+// Add a health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Start the keep warm service
+if (process.env.NODE_ENV === 'production') {
+  keepWarm();
+}
 
 // Middleware
 app.use(express.json());
@@ -53,7 +74,6 @@ app.use('/api/withdrawals', withdrawalRoutes);
 
 // AdPromoter Routes
 app.use('/api/web-advertise', webAdvertiseRoutes);
-// app.use('/api/test', test);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mern-auth', {

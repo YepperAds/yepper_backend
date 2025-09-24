@@ -299,12 +299,76 @@ exports.getCurrentUser = async (req, res) => {
 };
 
 // Google OAuth success
+// exports.googleSuccess = async (req, res) => {
+//   if (req.user) {
+//     const token = generateToken(req.user._id);
+//     res.redirect(`https://demo.yepper.cc/auth/success?token=${token}`);
+//   } else {
+//     res.redirect('https://demo.yepper.cc/login?error=google_auth_failed');
+//   }
+// };
+
 exports.googleSuccess = async (req, res) => {
-  if (req.user) {
-    const token = generateToken(req.user._id);
-    res.redirect(`https://demo.yepper.cc/auth/success?token=${token}`);
-  } else {
-    res.redirect('https://demo.yepper.cc/login?error=google_auth_failed');
+  try {
+    if (req.user) {
+      const token = generateToken(req.user._id);
+      
+      // Create a loading page that redirects
+      const loadingHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Signing you in...</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              height: 100vh; 
+              margin: 0;
+              background: #f5f5f5;
+            }
+            .loader { 
+              text-align: center; 
+            }
+            .spinner { 
+              border: 4px solid #f3f3f3; 
+              border-top: 4px solid #3498db; 
+              border-radius: 50%; 
+              width: 40px; 
+              height: 40px; 
+              animation: spin 2s linear infinite; 
+              margin: 0 auto 20px;
+            }
+            @keyframes spin { 
+              0% { transform: rotate(0deg); } 
+              100% { transform: rotate(360deg); } 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="loader">
+            <div class="spinner"></div>
+            <h2>Signing you in...</h2>
+            <p>Please wait while we complete your authentication.</p>
+          </div>
+          <script>
+            setTimeout(() => {
+              window.location.href = 'https://demo.yepper.cc/auth/success?token=${token}';
+            }, 1000);
+          </script>
+        </body>
+        </html>
+      `;
+      
+      res.send(loadingHTML);
+    } else {
+      res.redirect('https://demo.yepper.cc/login?error=google_auth_failed');
+    }
+  } catch (error) {
+    console.error('Google auth success error:', error);
+    res.redirect('https://demo.yepper.cc/login?error=server_error');
   }
 };
 
