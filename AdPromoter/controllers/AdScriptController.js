@@ -684,7 +684,7 @@ exports.serveAdScript = async (req, res) => {
           '<div class="yepper-ad-empty">' +
             '<div class="yepper-ad-empty-title"><h3>' + translations[currentLang].title + '</h3></div>' +
             '<div class="yepper-ad-empty-text"><p>' + translations[currentLang].price + ' $' + _p + '</p></div>' +
-            '<a href="www.yepper.cc/direct-ad?websiteId=' + _w + '&categoryId=' + _i + '" class="yepper-ad-empty-link">' +
+            '<a href="yepper.cc/direct-ad?websiteId=' + _w + '&categoryId=' + _i + '" class="yepper-ad-empty-link">' +
               '<span>' + translations[currentLang].action + '</span>' +
             '</a>' +
           '</div>';

@@ -29,9 +29,9 @@ app.use(express.json());
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://www.yepper.cc',
   'https://yepper.cc',
-  'http://www.yepper.cc',
+  'https://yepper.cc',
+  'http://yepper.cc',
   'http://yepper.cc'
 ];
 
