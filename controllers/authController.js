@@ -11,12 +11,9 @@ const generateToken = (userId) => {
   });
 };
 
-// Email transporter setup with better error handling
 const createTransporter = () => {
-  // Check if email credentials are available
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('Email credentials not configured. Email verification will be skipped.');
-    return null;
+    throw new Error('Email credentials not configured');
   }
 
   return nodemailer.createTransport({
@@ -28,131 +25,264 @@ const createTransporter = () => {
   });
 };
 
-// Send verification email with error handling
-const sendVerificationEmail = async (email, token) => {
+const sendVerificationEmail = async (email, token, returnUrl = null) => {
   const transporter = createTransporter();
   
-  if (!transporter) {
-    console.warn('Email transporter not available. Skipping email verification.');
-    return false;
+  // Build verification URL with returnUrl if provided
+  let verificationUrl = `${process.env.BACKEND_URL || 'https://yepper-backend.onrender.com'}/api/auth/verify-email?token=${token}`;
+  if (returnUrl) {
+    verificationUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
   }
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Verify Your Email Address',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; 
+            padding: 0; 
+            background-color: #f5f5f5; 
+          }
+          .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background-color: white; 
+            padding: 40px; 
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+          }
+          .title { 
+            color: #333; 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+          }
+          .subtitle { 
+            color: #666; 
+            font-size: 16px; 
+            line-height: 1.5; 
+          }
+          .verify-button { 
+            display: inline-block; 
+            background-color: #000; 
+            color: white !important; 
+            padding: 16px 32px; 
+            text-decoration: none; 
+            font-weight: 600; 
+            font-size: 16px;
+            margin: 30px 0;
+            text-align: center;
+          }
+          .verify-button:hover { 
+            background-color: #333; 
+          }
+          .footer { 
+            text-align: center; 
+            color: #999; 
+            font-size: 14px; 
+            margin-top: 30px; 
+            line-height: 1.5;
+          }
+          .email-display {
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #333;
+            margin: 20px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 class="title">Verify Your Email Address</h1>
+            <p class="subtitle">
+              Welcome! Please verify your email address to complete your account setup and get started.
+            </p>
+          </div>
+          
+          <div style="text-align: center;">
+            <a href="${verificationUrl}" class="verify-button">
+              Verify Email Address & Sign In
+            </a>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
 
-  try {
-    const verificationUrl = `https://demo.yepper.cc/verify-email?token=${token}`;
-    
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Email Verification',
-      html: `
-        <h2>Email Verification</h2>
-        <p>Please click the link below to verify your email:</p>
-        <a href="${verificationUrl}">Verify Email</a>
-        <p>This link will expire in 1 hour.</p>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (error) {
-    console.error('Error sending verification email:', error);
-    return false;
-  }
+  await transporter.sendMail(mailOptions);
 };
 
-// Register with improved error handling
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, returnUrl } = req.body;
 
     // Validate input
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Name, email, and password are required' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Name, email, and password are required' 
+      });
     }
 
-    // Check if user exists
+    // Check if user exists with this email
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      if (existingUser.isVerified) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'An account with this email already exists and is verified. Please sign in instead.' 
+        });
+      } else {
+        // Delete the unverified user and allow re-registration
+        await User.deleteOne({ email });
+        console.log('Deleted unverified user for re-registration:', email);
+      }
     }
 
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const verificationTokenExpires = new Date(Date.now() + 3600000); // 1 hour
 
-    // Create user
+    // Create user (always unverified initially)
     const user = new User({
       name,
       email,
       password,
       verificationToken,
       verificationTokenExpires,
-      // If email service is not available, auto-verify the user
-      isVerified: !process.env.EMAIL_USER || !process.env.EMAIL_PASS
+      isVerified: false
     });
 
     await user.save();
 
-    // Attempt to send verification email
-    const emailSent = await sendVerificationEmail(email, verificationToken);
-
-    let message;
-    if (emailSent) {
-      message = 'User registered successfully. Please check your email to verify your account.';
-    } else {
-      message = 'User registered successfully. Email verification is currently unavailable, so your account has been automatically verified.';
+    // Send verification email with optional returnUrl
+    try {
+      await sendVerificationEmail(email, verificationToken, returnUrl);
+      
+      res.status(201).json({
+        success: true,
+        requiresVerification: true,
+        maskedEmail: maskEmail(email),
+        message: 'Account created successfully. Please check your email to verify your account and get started.'
+      });
+    } catch (emailError) {
+      // If email fails to send, delete the user
+      await User.deleteOne({ _id: user._id });
+      console.error('Email sending failed:', emailError);
+      
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to send verification email. Please try again later.' 
+      });
     }
-
-    res.status(201).json({
-      message,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        isVerified: user.isVerified
-      }
-    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ 
-      message: 'Server error during registration', 
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      success: false,
+      message: 'Server error during registration. Please try again.' 
     });
   }
 };
 
-// Login
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { token, returnUrl } = req.query;
+
+    if (!token) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://www.yepper.cc'}/verify-error?reason=missing_token`);
+    }
+
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://www.yepper.cc'}/verify-error?reason=invalid_token`);
+    }
+
+    // Verify user and clear verification tokens
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+    await user.save();
+
+    // Generate JWT token for automatic sign-in
+    const authToken = generateToken(user._id);
+
+    // NEW: Always redirect to verify-success page, but include returnUrl info
+    let redirectUrl = `${process.env.FRONTEND_URL || 'http://www.yepper.cc'}/verify-success?token=${authToken}&auto_login=true`;
+    
+    if (returnUrl) {
+      // Add a flag to indicate this came from DirectAdvertise
+      redirectUrl += '&fromDirectAdvertise=true';
+    }
+
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://www.yepper.cc'}/verify-error?reason=server_error`);
+  }
+};
+
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email and password are required' 
+      });
     }
 
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid email or password' 
+      });
     }
 
-    // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid email or password' 
+      });
     }
 
-    // Check if email is verified (only if email service is configured)
-    if (!user.isVerified && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-      return res.status(400).json({ message: 'Please verify your email first' });
+    if (!user.isVerified) {
+      return res.status(400).json({ 
+        success: false,
+        requiresVerification: true,
+        maskedEmail: maskEmail(email),
+        message: 'Please verify your email address first. Check your inbox for the verification email.' 
+      });
     }
 
-    // Generate token
     const token = generateToken(user._id);
 
     res.json({
-      message: 'Login successful',
+      success: true,
       token,
       user: {
         id: user._id,
@@ -165,61 +295,36 @@ exports.login = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ 
-      message: 'Server error during login', 
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      success: false,
+      message: 'Server error during login' 
     });
   }
 };
 
-// Verify Email
-exports.verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.query;
-
-    if (!token) {
-      return res.status(400).json({ message: 'Token is required' });
-    }
-
-    const user = await User.findOne({
-      verificationToken: token,
-      verificationTokenExpires: { $gt: Date.now() }
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
-    }
-
-    user.isVerified = true;
-    user.verificationToken = null;
-    user.verificationTokenExpires = null;
-    await user.save();
-
-    res.json({ message: 'Email verified successfully' });
-  } catch (error) {
-    console.error('Email verification error:', error);
-    res.status(500).json({ 
-      message: 'Server error during email verification', 
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
-  }
-};
-
-// Resend verification email
 exports.resendVerification = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, returnUrl } = req.body;
 
     if (!email) {
-      return res.status(400).json({ message: 'Email is required' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email is required' 
+      });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'No account found with this email address.' 
+      });
     }
 
     if (user.isVerified) {
-      return res.status(400).json({ message: 'Email already verified' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'This email is already verified.' 
+      });
     }
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -229,31 +334,57 @@ exports.resendVerification = async (req, res) => {
     user.verificationTokenExpires = verificationTokenExpires;
     await user.save();
 
-    const emailSent = await sendVerificationEmail(email, verificationToken);
-
-    if (emailSent) {
-      res.json({ message: 'Verification email sent' });
-    } else {
-      res.status(500).json({ message: 'Failed to send verification email' });
+    try {
+      await sendVerificationEmail(email, verificationToken, returnUrl);
+      res.json({ 
+        success: true,
+        message: 'Verification email sent successfully. Click the link in the email to verify and sign in.' 
+      });
+    } catch (emailError) {
+      res.status(500).json({ 
+        success: false,
+        message: 'Failed to send verification email. Please try again.' 
+      });
     }
   } catch (error) {
     console.error('Resend verification error:', error);
     res.status(500).json({ 
-      message: 'Server error', 
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      success: false,
+      message: 'Server error. Please try again.' 
     });
   }
 };
 
-// Get user profile
+const maskEmail = (email) => {
+  const [localPart, domain] = email.split('@');
+  if (localPart.length <= 2) {
+    return `${localPart[0]}*****@${domain}`;
+  }
+  const visibleChars = Math.min(2, localPart.length - 1);
+  const maskedPart = '*'.repeat(5);
+  return `${localPart.substring(0, visibleChars)}${maskedPart}@${domain}`;
+};
+
+// Other methods remain the same...
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select('-password');
+    const user = await User.findById(req.user.userId).select('-password -verificationToken -resetPasswordToken');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.json({ user });
+    res.json({ 
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        isVerified: user.isVerified,
+        googleId: user.googleId,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      }
+    });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ 
@@ -298,81 +429,15 @@ exports.getCurrentUser = async (req, res) => {
   }
 };
 
-// Google OAuth success
-// exports.googleSuccess = async (req, res) => {
-//   if (req.user) {
-//     const token = generateToken(req.user._id);
-//     res.redirect(`https://demo.yepper.cc/auth/success?token=${token}`);
-//   } else {
-//     res.redirect('https://demo.yepper.cc/login?error=google_auth_failed');
-//   }
-// };
-
 exports.googleSuccess = async (req, res) => {
-  try {
-    if (req.user) {
-      const token = generateToken(req.user._id);
-      
-      // Create a loading page that redirects
-      const loadingHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Signing you in...</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              display: flex; 
-              justify-content: center; 
-              align-items: center; 
-              height: 100vh; 
-              margin: 0;
-              background: #f5f5f5;
-            }
-            .loader { 
-              text-align: center; 
-            }
-            .spinner { 
-              border: 4px solid #f3f3f3; 
-              border-top: 4px solid #3498db; 
-              border-radius: 50%; 
-              width: 40px; 
-              height: 40px; 
-              animation: spin 2s linear infinite; 
-              margin: 0 auto 20px;
-            }
-            @keyframes spin { 
-              0% { transform: rotate(0deg); } 
-              100% { transform: rotate(360deg); } 
-            }
-          </style>
-        </head>
-        <body>
-          <div class="loader">
-            <div class="spinner"></div>
-            <h2>Signing you in...</h2>
-            <p>Please wait while we complete your authentication.</p>
-          </div>
-          <script>
-            setTimeout(() => {
-              window.location.href = 'https://demo.yepper.cc/auth/success?token=${token}';
-            }, 1000);
-          </script>
-        </body>
-        </html>
-      `;
-      
-      res.send(loadingHTML);
-    } else {
-      res.redirect('https://demo.yepper.cc/login?error=google_auth_failed');
-    }
-  } catch (error) {
-    console.error('Google auth success error:', error);
-    res.redirect('https://demo.yepper.cc/login?error=server_error');
+  if (req.user) {
+    const token = generateToken(req.user._id);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://www.yepper.cc'}/success?token=${token}`);
+  } else {
+    res.redirect(`${process.env.FRONTEND_URL || 'http://www.yepper.cc'}/login?error=google_auth_failed`);
   }
 };
 
-// Google OAuth failure
 exports.googleFailure = (req, res) => {
-  res.redirect('https://demo.yepper.cc/login?error=google_auth_failed');
+  res.redirect(`${process.env.FRONTEND_URL || 'http://www.yepper.cc'}/login?error=google_auth_failed`);
 };

@@ -137,15 +137,12 @@ exports.serveAdScript = async (req, res) => {
           margin-bottom: 16px;
           background: rgba(255, 255, 255, 0.1);
           backdrop-filter: blur(5px);
-          min-height: 140px;
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .yepper-ad-image {
           width: 100%;
           height: auto;
-          min-height: 140px;
-          max-height: 180px;
           object-fit: cover;
           display: block;
           transition: transform 0.3s ease;
@@ -358,10 +355,7 @@ exports.serveAdScript = async (req, res) => {
             font-size: 11px;
           }
           
-          .yepper-ad-image {
-            min-height: 120px;
-            max-height: 150px;
-          }
+          
         }
         
         @media (max-width: 480px) {
@@ -690,7 +684,7 @@ exports.serveAdScript = async (req, res) => {
           '<div class="yepper-ad-empty">' +
             '<div class="yepper-ad-empty-title"><h3>' + translations[currentLang].title + '</h3></div>' +
             '<div class="yepper-ad-empty-text"><p>' + translations[currentLang].price + ' $' + _p + '</p></div>' +
-            '<a href="https://demo.yepper.cc/direct-ad?websiteId=' + _w + '&categoryId=' + _i + '" class="yepper-ad-empty-link">' +
+            '<a href="http://www.yepper.cc/direct-ad?websiteId=' + _w + '&categoryId=' + _i + '" class="yepper-ad-empty-link">' +
               '<span>' + translations[currentLang].action + '</span>' +
             '</a>' +
           '</div>';
