@@ -1848,7 +1848,7 @@ exports.generateFlutterwavePaymentUrl = async (paymentData) => {
   try {
     // Check if Flutterwave secret key is configured
     const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY || process.env.FLW_TEST_SECRET_KEY;
-    const frontendUrl = process.env.FRONTEND_URL || 'http://www.yepper.cc';
+    const frontendUrl = process.env.FRONTEND_URL || 'www.yepper.cc';
     
     if (!flutterwaveSecretKey) {
       console.error('Neither FLUTTERWAVE_SECRET_KEY nor FLW_TEST_SECRET_KEY environment variable is set');
