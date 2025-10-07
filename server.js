@@ -33,22 +33,30 @@ const allowedOrigins = [
   'https://yepper-backend.onrender.com',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
+  'null' // Allow null origin for local file testing (remove in production)
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
+    console.log('Request origin:', origin); // Debug log
+    
+    // Allow requests with no origin (mobile apps, curl, file://)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-      return callback(new Error(msg), false);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
     }
-    return callback(null, true);
+    
+    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    return callback(new Error(msg), false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add explicit CORS headers for preflight requests
+app.options('*', cors());
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -78,9 +86,16 @@ app.use('/api/web-advertise', webAdvertiseRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err.message);
+  console.error('Error Details:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+  
   res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error'
+    error: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
@@ -95,9 +110,8 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mern-auth
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
-
-
 
 
 // // server.js
