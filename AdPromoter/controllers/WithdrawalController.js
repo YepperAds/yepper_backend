@@ -22,31 +22,43 @@ exports.createWithdrawalRequest = async (req, res) => {
       swiftCode 
     } = req.body;
 
+    console.log('Request params:', { ownerType, userId, userEmail });
+    console.log('Request body:', req.body);
+
     // Validation
     if (!amount || amount <= 0) {
       await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ error: 'Invalid withdrawal amount' });
     }
 
     if (!bankName || !accountNumber || !accountName || !country) {
       await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ error: 'All required bank details must be provided' });
     }
 
+    // Convert userId to string to ensure consistency
+    const userIdStr = String(userId);
+
     // Find wallet
     const wallet = await Wallet.findOne({
-      ownerId: userId,
+      ownerId: userIdStr,
       ownerType: ownerType
     }).session(session);
 
+    console.log('Wallet found:', wallet);
+
     if (!wallet) {
       await session.abortTransaction();
+      session.endSession();
       return res.status(404).json({ error: 'Wallet not found' });
     }
 
     // Check if wallet has sufficient balance
     if (wallet.balance < amount) {
       await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ 
         error: 'Insufficient balance',
         currentBalance: wallet.balance,
@@ -56,13 +68,14 @@ exports.createWithdrawalRequest = async (req, res) => {
 
     // Check for pending withdrawal requests
     const pendingRequest = await WithdrawalRequest.findOne({
-      userId: userId,
+      userId: userIdStr,
       ownerType: ownerType,
       status: 'pending'
     }).session(session);
 
     if (pendingRequest) {
       await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ 
         error: 'You already have a pending withdrawal request. Please wait for it to be processed.' 
       });
@@ -71,10 +84,10 @@ exports.createWithdrawalRequest = async (req, res) => {
     // Create withdrawal request
     const withdrawalRequest = new WithdrawalRequest({
       walletId: wallet._id,
-      userId: userId,
+      userId: userIdStr,
       userEmail: userEmail,
       ownerType: ownerType,
-      amount: amount,
+      amount: parseFloat(amount),
       bankDetails: {
         bankName,
         accountNumber,
@@ -104,7 +117,7 @@ exports.createWithdrawalRequest = async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     console.error('Withdrawal request error:', error);
-    res.status(500).json({ error: 'Failed to create withdrawal request' });
+    res.status(500).json({ error: 'Failed to create withdrawal request', details: error.message });
   } finally {
     session.endSession();
   }
