@@ -30,16 +30,13 @@ router.get('/wallet/transactions', authMiddleware, WalletController.getWalletTra
 router.get('/wallet/:ownerType/balance', authMiddleware, WalletController.getWalletBalance);
 router.get('/wallet/:ownerType/transactions', authMiddleware, WalletController.getTransactionHistory);
 
+router.post('/wallet/:ownerType/withdrawal-request', authMiddleware, WalletController.createWithdrawalRequest);
+router.get('/wallet/:ownerType/withdrawal-requests?page=1&limit=10', authMiddleware, WalletController.getUserWithdrawalRequests);
+router.patch('/wallet/withdrawal-request/:requestId/cancel', authMiddleware, WalletController.cancelWithdrawalRequest);
+router.get('/admin/withdrawal-requests?status=pending&page=1&limit=20', authMiddleware, WalletController.getAllWithdrawalRequests);
+router.patch('/admin/withdrawal-request/:requestId/process', authMiddleware, WalletController.processWithdrawalRequest);
+
 router.post('/reject/:adId/:websiteId/:categoryId', authMiddleware, adRejectionController.rejectAd);
 router.get('/pending-rejections', authMiddleware, adRejectionController.getPendingRejections);
-
-// router.get('/check-eligibility/:payment', categoryController.checkWithdrawalEligibility);
-// router.get('/balance/:userId', categoryController.getWebOwnerBalance);
-// router.get('/earnings/:userId', categoryController.getDetailedEarnings);
-// router.post('/withdraw', authMiddleware, categoryController.initiateWithdrawal);
-// router.post('/withdrawal-callback', categoryController.withdrawalCallback);
-// router.post('/withdraw-manual', categoryController.requestManualWithdrawal);
-// router.get('/diagnostic/flutterwave-ip', categoryController.checkIPAndFlutterwaveAccess);
-// router.get('/manual-withdrawals', categoryController.getManualWithdrawals);
 
 module.exports = router;
