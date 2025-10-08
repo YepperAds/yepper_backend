@@ -79,7 +79,7 @@ app.use('/api/createWebsite', createWebsiteRoutes);
 app.use('/api/business-categories', businessCategoriesRoutes);
 app.use('/api/ad-categories', createCategoryRoutes);
 app.use('/api/ads', adDisplayRoutes);
-app.use('/api/withdrawals', withdrawalRoutes);
+// app.use('/api/withdrawals', withdrawalRoutes);
 
 // AdOwner Routes
 app.use('/api/web-advertise', webAdvertiseRoutes);
