@@ -26,7 +26,7 @@ app.use(express.json());
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:5000',
+  'https://yepper-backend.onrender.com',
   'http://localhost:3001',
   'http://yepper.cc',
   'https://yepper.cc',
