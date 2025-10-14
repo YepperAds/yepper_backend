@@ -26,12 +26,12 @@ app.use(express.json());
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://yepper-backend.onrender.com',
+  'https://yepper-backend.vercel.app',
   'http://localhost:3001',
   'http://yepper.cc',
   'https://yepper.cc',
   'http://localhost:3000/',
-  'https://yepper-backend.onrender.com',
+  'https://yepper-backend.vercel.app',
   'https://www.yepper.cc',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
