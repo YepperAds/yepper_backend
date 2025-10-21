@@ -29,7 +29,7 @@ const sendVerificationEmail = async (email, token, returnUrl = null) => {
   const transporter = createTransporter();
   
   // Build verification URL with returnUrl if provided
-  let verificationUrl = `${process.env.BACKEND_URL || 'https://yepper-backend.vercel.app'}/api/auth/verify-email?token=${token}`;
+  let verificationUrl = `${process.env.BACKEND_URL || 'https://yepper-backend-ll50.onrender.com'}/api/auth/verify-email?token=${token}`;
   if (returnUrl) {
     verificationUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
   }

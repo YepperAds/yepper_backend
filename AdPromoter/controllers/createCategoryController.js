@@ -11,7 +11,7 @@ const Payment = require('../../AdOwner/models/PaymentModel');
 
 const generateScriptTag = (categoryId) => {
   return {
-    script: `<script src="https://yepper-backend.vercel.app/api/ads/script/${categoryId}"></script>`
+    script: `<script src="https://yepper-backend-ll50.onrender.com/api/ads/script/${categoryId}"></script>`
   };
 };
 
