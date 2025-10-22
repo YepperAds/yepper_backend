@@ -3,6 +3,8 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -26,108 +28,67 @@ const createTransporter = () => {
 };
 
 const sendVerificationEmail = async (email, token, returnUrl = null) => {
-  const transporter = createTransporter();
-  
-  // Build verification URL with returnUrl if provided
-  let verificationUrl = `${process.env.BACKEND_URL || 'https://yepper-backend-ll50.onrender.com'}/api/auth/verify-email?token=${token}`;
-  if (returnUrl) {
-    verificationUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
-  }
-  
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'Verify Your Email Address',
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Email Verification</title>
-        <style>
-          body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0; 
-            padding: 0; 
-            background-color: #f5f5f5; 
-          }
-          .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background-color: white; 
-            padding: 40px; 
-            border-radius: 8px;
-            margin-top: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          }
-          .header { 
-            text-align: center; 
-            margin-bottom: 30px; 
-          }
-          .title { 
-            color: #333; 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
-          }
-          .subtitle { 
-            color: #666; 
-            font-size: 16px; 
-            line-height: 1.5; 
-          }
-          .verify-button { 
-            display: inline-block; 
-            background-color: #000; 
-            color: white !important; 
-            padding: 16px 32px; 
-            text-decoration: none; 
-            font-weight: 600; 
-            font-size: 16px;
-            margin: 30px 0;
-            text-align: center;
-          }
-          .verify-button:hover { 
-            background-color: #333; 
-          }
-          .footer { 
-            text-align: center; 
-            color: #999; 
-            font-size: 14px; 
-            margin-top: 30px; 
-            line-height: 1.5;
-          }
-          .email-display {
-            background-color: #f8f9fa;
-            padding: 12px;
-            border-radius: 4px;
-            font-family: monospace;
-            color: #333;
-            margin: 20px 0;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 class="title">Verify Your Email Address</h1>
-            <p class="subtitle">
-              Welcome! Please verify your email address to complete your account setup and get started.
-            </p>
-          </div>
-          
-          <div style="text-align: center;">
-            <a href="${verificationUrl}" class="verify-button">
-              Verify Email Address & Sign In
-            </a>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  };
+  try {
+    let verificationUrl = `${process.env.BACKEND_URL || 'https://yepper-backend-ll50.onrender.com'}/api/auth/verify-email?token=${token}`;
+    if (returnUrl) {
+      verificationUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
+    }
 
-  await transporter.sendMail(mailOptions);
+    const { data, error } = await resend.emails.send({
+      from: 'Yepper <onboarding@resend.dev>', // Use resend.dev or your domain
+      to: email,
+      subject: 'Verify Your Email Address',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0; padding: 20px 0;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="padding: 40px;">
+                      <h1 style="color: #333; font-size: 24px; font-weight: bold; margin: 0 0 10px 0; text-align: center;">Verify Your Email Address</h1>
+                      <p style="color: #666; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0; text-align: center;">
+                        Welcome! Please verify your email address to complete your account setup.
+                      </p>
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 20px 0;">
+                            <a href="${verificationUrl}" style="display: inline-block; background-color: #000; color: white; padding: 16px 32px; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 4px;">
+                              Verify Email Address
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
+                        This link expires in 1 hour.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      throw new Error('Failed to send email');
+    }
+
+    console.log(`✅ Email sent to ${email}. ID: ${data.id}`);
+  } catch (error) {
+    console.error('Email error:', error);
+    throw new Error('Failed to send verification email');
+  }
 };
 
 exports.register = async (req, res) => {
