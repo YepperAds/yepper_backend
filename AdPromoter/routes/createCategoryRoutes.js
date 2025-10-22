@@ -8,6 +8,7 @@ const adRejectionController = require('../controllers/AdRejectionController');
 const authMiddleware = require('../../middleware/authmiddleware');
 
 router.get('/category/:categoryId', categoryController.getCategoryById);
+router.get('/:websiteId/advertiser', categoryController.getCategoriesByWebsiteForAdvertisers);
 
 router.use(authMiddleware);
 
@@ -15,11 +16,9 @@ router.post('/', categoryController.createCategory);
 router.get('/pending-rejections', authMiddleware, categoryController.getPendingRejections);
 router.get('/active-ads', authMiddleware, categoryController.getActiveAds);
 router.post('/reject/:adId/:websiteId/:categoryId', authMiddleware, categoryController.rejectAd);
-
 router.put('/:categoryId/reset-user-count', categoryController.resetUserCount);
 router.delete('/:categoryId', categoryController.deleteCategory);
 router.get('/', categoryController.getCategories);
-router.get('/:websiteId/advertiser', categoryController.getCategoriesByWebsiteForAdvertisers);
 router.get('/:websiteId', categoryController.getCategoriesByWebsite);
 router.patch('/category/:categoryId/language', categoryController.updateCategoryLanguage);
 router.get('/pending/:ownerId', categoryController.getPendingAds);
