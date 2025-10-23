@@ -27,8 +27,10 @@ const createTransporter = () => {
   });
 };
 
+// authController.js
 const sendVerificationEmail = async (email, token, returnUrl = null) => {
   try {
+    // Check if API key exists
     if (!process.env.RESEND_API_KEY) {
       throw new Error('RESEND_API_KEY not configured');
     }
@@ -38,8 +40,11 @@ const sendVerificationEmail = async (email, token, returnUrl = null) => {
       verificationUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
     }
 
+    console.log('Sending email to:', email);
+    console.log('Using API key:', process.env.RESEND_API_KEY.substring(0, 10) + '...');
+
     const { data, error } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: 'Yepper <noreply@yepper.cc>',
       to: email,
       subject: 'Verify Your Email Address',
       html: `
@@ -98,7 +103,7 @@ const sendVerificationEmail = async (email, token, returnUrl = null) => {
     console.error('Email error:', error);
     throw error;
   }
-}
+};
 
 exports.register = async (req, res) => {
   try {
