@@ -27,15 +27,24 @@ const createTransporter = () => {
   });
 };
 
+// authController.js
 const sendVerificationEmail = async (email, token, returnUrl = null) => {
   try {
+    // Check if API key exists
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY not configured');
+    }
+
     let verificationUrl = `${process.env.BACKEND_URL || 'https://yepper-backend-ll50.onrender.com'}/api/auth/verify-email?token=${token}`;
     if (returnUrl) {
       verificationUrl += `&returnUrl=${encodeURIComponent(returnUrl)}`;
     }
 
+    console.log('Sending email to:', email);
+    console.log('Using API key:', process.env.RESEND_API_KEY.substring(0, 10) + '...');
+
     const { data, error } = await resend.emails.send({
-      from: 'Yepper <onboarding@resend.dev>', // Use resend.dev or your domain
+      from: 'Yepper <noreply@yepper.cc>', // ⚠️ Change to YOUR verified domain!
       to: email,
       subject: 'Verify Your Email Address',
       html: `
@@ -68,6 +77,9 @@ const sendVerificationEmail = async (email, token, returnUrl = null) => {
                       <p style="color: #999; font-size: 14px; text-align: center; margin-top: 30px;">
                         This link expires in 1 hour.
                       </p>
+                      <p style="color: #999; font-size: 12px; text-align: center; margin-top: 20px;">
+                        If you didn't create an account, you can safely ignore this email.
+                      </p>
                     </td>
                   </tr>
                 </table>
@@ -80,14 +92,16 @@ const sendVerificationEmail = async (email, token, returnUrl = null) => {
     });
 
     if (error) {
-      console.error('Resend error:', error);
-      throw new Error('Failed to send email');
+      console.error('Resend API Error:', error);
+      throw new Error(`Failed to send email: ${error.message || JSON.stringify(error)}`);
     }
 
-    console.log(`✅ Email sent to ${email}. ID: ${data.id}`);
+    console.log(`Email sent successfully to ${email}`);
+    console.log(`Email ID: ${data.id}`);
+    return data;
   } catch (error) {
     console.error('Email error:', error);
-    throw new Error('Failed to send verification email');
+    throw error;
   }
 };
 
