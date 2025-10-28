@@ -78,7 +78,7 @@ router.post('/forgot-password', async (req, res) => {
         await user.save();
 
         // Send reset email
-        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+        const resetUrl = `${process.env.FRONTEND_URL || 'https://yepper.cc'}/reset-password/${resetToken}`;
         const emailResult = await sendEmail({ 
             to: email, 
             subject: 'Password Reset Request', 
