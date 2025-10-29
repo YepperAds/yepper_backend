@@ -1,6 +1,7 @@
 // AdCategoryRoutes.js
 const express = require('express');
 const router = express.Router();
+const AdCategory = require('../models/CreateCategoryModel');
 const categoryController = require('../controllers/createCategoryController');
 const WalletController = require('../controllers/WalletController');
 const WithdrawalController = require('../controllers/WithdrawalController');
@@ -23,6 +24,54 @@ router.get('/:websiteId', categoryController.getCategoriesByWebsite);
 router.patch('/category/:categoryId/language', categoryController.updateCategoryLanguage);
 router.get('/pending/:ownerId', categoryController.getPendingAds);
 router.put('/approve/:adId/website/:websiteId', categoryController.approveAdForWebsite);
+
+router.get('/categoriees/:categoryId', authMiddleware, async (req, res) => {
+  try {
+    const category = await AdCategory.findById(req.params.categoryId);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+    res.json(category);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching category' });
+  }
+});
+
+// PUT /api/ad-categories/categoriees/:categoryId/customization
+router.put('/categoriees/:categoryId/customization', authMiddleware, async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { customization } = req.body;
+    
+    // Validate that the category exists and belongs to the user
+    const category = await AdCategory.findById(categoryId);
+    
+    if (!category) {
+      return res.status(404).json({ error: 'Category not found' });
+    }
+    
+    // Verify ownership if needed
+    if (category.ownerId !== req.user.id && category.ownerId !== req.user._id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    
+    // Update the customization
+    category.customization = customization;
+    await category.save();
+    
+    res.json({ 
+      message: 'Customization saved successfully',
+      category: category
+    });
+    
+  } catch (error) {
+    console.error('Error saving customization:', error);
+    res.status(500).json({ 
+      error: 'Failed to save customization',
+      message: error.message 
+    });
+  }
+});
 
 router.get('/wallet', authMiddleware, WalletController.getWallet);
 router.get('/wallet/transactions', authMiddleware, WalletController.getWalletTransactions);
