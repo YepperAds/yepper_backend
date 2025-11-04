@@ -9,6 +9,8 @@ require('./config/passport');
 
 // User
 const authRoutes = require('./routes/authRoutes');
+const conversationRoutes = require('./routes/conversationRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 // Ad Promoter
 const createWebsiteRoutes = require('./AdPromoter/routes/createWebsiteRoutes');
@@ -25,11 +27,9 @@ const app = express();
 app.use(express.json());
 
 const allowedOrigins = [
-  'http://localhost:3000',
-  'https://yepper-backend-ll50.onrender.com',
   'http://localhost:3001',
   'http://yepper.cc',
-  'https://yepper.cc',
+  'http://localhost:3000',
   'http://localhost:3000/',
   'https://yepper-backend-ll50.onrender.com',
   'https://www.yepper.cc',
@@ -88,6 +88,8 @@ app.use(passport.session());
 
 // Auth Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/ai', aiRoutes);
 
 // AdPromoter Routes
 app.use('/api/createWebsite', createWebsiteRoutes);

@@ -37,7 +37,6 @@ router.get('/categoriees/:categoryId', authMiddleware, async (req, res) => {
   }
 });
 
-// PUT /api/ad-categories/categoriees/:categoryId/customization
 router.put('/categoriees/:categoryId/customization', authMiddleware, async (req, res) => {
   try {
     const { categoryId } = req.params;
