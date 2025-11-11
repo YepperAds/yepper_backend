@@ -30,7 +30,7 @@ const allowedOrigins = [
   'http://localhost:3001',
   'http://yepper.cc',
   'http://localhost:3000',
-  'http://localhost:3000/',
+  'https://yepper.cc/',
   'https://yepper-backend-ll50.onrender.com',
   'https://www.yepper.cc',
   'http://127.0.0.1:3000',
@@ -54,8 +54,8 @@ app.use(cors({
     return callback(new Error(msg), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], // Added PATCH here
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'], // Added Cache-Control here
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
@@ -69,7 +69,7 @@ app.options('*', cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'], // Added Cache-Control here too
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
