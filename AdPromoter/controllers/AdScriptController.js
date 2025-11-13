@@ -67,11 +67,9 @@ exports.serveAdScript = async (req, res) => {
       const generateStyles = (custom) => {
         const prefix = 'yepper-ad-' + _i;
         
-        // Determine flex direction based on image position
         const isHorizontal = custom.imagePosition === 'left';
         const flexDirection = isHorizontal ? 'row' : 'column';
         
-        // Calculate image size based on orientation
         const imageFlexBasis = isHorizontal ? '40%' : 'auto';
         const imageHeight = isHorizontal ? '100%' : custom.height ? (custom.height * 0.5 + 'px') : '200px';
         
@@ -130,20 +128,20 @@ exports.serveAdScript = async (req, res) => {
           
           .\${prefix}-item {
             display: block;
-            width: \${custom.width ? custom.width + 'px' : '100%'} !important;
-            height: \${custom.height ? custom.height + 'px' : 'auto'} !important;
+            width: \${custom.width ? custom.width + 'px' : '100%'};
+            height: \${custom.height ? custom.height + 'px' : 'auto'};
             max-width: \${custom.maxWidth || 100}%;
             text-decoration: none;
             overflow: hidden;
-            background: \${custom.backgroundColor || '#f1f1f1ff'} !important;
+            background: \${custom.backgroundColor || '#f1f1f1ff'};
             \${custom.glassmorphism !== false ? 'backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);' : ''}
-            border: \${custom.borderWidth || 1}px solid \${custom.borderColor || 'rgba(255, 255, 255, 0.18)'} !important;
-            border-radius: \${custom.borderRadius || 16}px !important;
+            border: \${custom.borderWidth || 1}px solid \${custom.borderColor || 'rgba(255, 255, 255, 0.18)'};
+            border-radius: \${custom.borderRadius || 16}px;
             box-shadow: \${custom.shadow === 'none' ? 'none' : custom.shadow === 'small' ? '0 2px 4px rgba(0,0,0,0.1)' : custom.shadow === 'large' ? '0 20px 50px rgba(0,0,0,0.3)' : '0 8px 32px rgba(31, 38, 135, 0.37)'};
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             color: inherit;
-            padding: \${custom.padding || 0}px !important;
+            padding: \${custom.padding || 0}px;
           }
 
           .\${prefix}-item::before {
@@ -199,7 +197,7 @@ exports.serveAdScript = async (req, res) => {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            \${custom.showImage === false ? 'display: none !important;' : ''}
+            \${custom.showImage === false ? 'display: none;' : ''}
             
             \${isHorizontal ? \`
               flex-basis: \${imageFlexBasis};
@@ -251,11 +249,11 @@ exports.serveAdScript = async (req, res) => {
           }
           
           .\${prefix}-business-name {
-            font-size: \${custom.titleSize || 16}px !important;
-            font-weight: 600 !important;
-            color: \${custom.titleColor || 'rgba(0, 0, 0, 0.9)'} !important;
-            margin: 0 0 clamp(6px, 1.5cqw, 10px) 0 !important;
-            line-height: 1.3 !important;
+            font-size: \${custom.titleSize || 16}px;
+            font-weight: 600;
+            color: \${custom.titleColor || 'rgba(0, 0, 0, 0.9)'};
+            margin: 0 0 clamp(6px, 1.5cqw, 10px) 0;
+            line-height: 1.3;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -270,17 +268,17 @@ exports.serveAdScript = async (req, res) => {
           }
           
           .\${prefix}-description {
-            padding: 10px 0 !important;
-            font-size: \${custom.descriptionSize || 15}px !important;
-            color: \${custom.descriptionColor || 'rgba(0, 0, 0, 0.6)'} !important;
-            line-height: 1.5 !important;
-            margin: 0 0 clamp(10px, 2cqw, 16px) 0 !important;
+            padding: 10px 0;
+            font-size: \${custom.descriptionSize || 15}px;
+            color: \${custom.descriptionColor || 'rgba(0, 0, 0, 0.6)'};
+            line-height: 1.5;
+            margin: 0 0 clamp(10px, 2cqw, 16px) 0;
             display: -webkit-box;
             -webkit-line-clamp: \${isHorizontal ? '2' : '3'};
             -webkit-box-orient: vertical;
             overflow: hidden;
             flex: 1;
-            \${custom.showDescription === false ? 'display: none !important;' : ''}
+            \${custom.showDescription === false ? 'display: none;' : ''}
           }
           
           @container ad-wrapper-\${_i} (max-width: 280px) {
@@ -306,48 +304,48 @@ exports.serveAdScript = async (req, res) => {
           }
           
           .\${prefix}-cta {
-            display: inline-flex !important;
-            align-items: center !important;
-            align-self: flex-start !important;
-            background: \${custom.ctaBackground || 'rgba(0, 0, 0, 1)'} !important;
+            display: inline-flex;
+            align-items: center;
+            align-self: flex-start;
+            background: \${custom.ctaBackground || 'rgba(0, 0, 0, 1)'};
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            color: \${custom.ctaColor || 'rgba(255, 255, 255, 1)'} !important;
-            padding: clamp(6px, 1.5cqw, 10px) clamp(30px, 2.5cqw, 38px) !important;
-            border-radius: clamp(6px, 1.5cqw, 10px) !important;
-            font-size: \${custom.ctaSize || 18}px !important;
-            font-weight: 500 !important;
-            letter-spacing: 0.01em !important;
+            color: \${custom.ctaColor || 'rgba(255, 255, 255, 1)'};
+            padding: clamp(6px, 1.5cqw, 10px) clamp(30px, 2.5cqw, 38px);
+            border-radius: clamp(6px, 1.5cqw, 10px);
+            font-size: \${custom.ctaSize || 18}px;
+            font-weight: 500;
+            letter-spacing: 0.01em;
             transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            \${custom.showCTA === false ? 'display: none !important;' : ''}
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            \${custom.showCTA === false ? 'display: none;' : ''}
           }
           
           .\${prefix}-cta:hover {
             transform: translateY(-1px);
-            background: rgba(255, 255, 255, 0.47) !important;
-            border-color: rgba(255, 255, 255, 0.3) !important;
+            background: rgba(255, 255, 255, 0.47);
+            border-color: rgba(255, 255, 255, 0.3);
           }
           
           @media (prefers-color-scheme: dark) {
             .\${prefix}-item {
-              background: rgba(0, 0, 0, 0.25) !important;
-              border-color: rgba(255, 255, 255, 0.18) !important;
+              background: rgba(0, 0, 0, 0.25);
+              border-color: rgba(255, 255, 255, 0.18);
               box-shadow: 0 clamp(4px, 1cqw, 8px) clamp(16px, 4cqw, 32px) 0 rgba(0, 0, 0, 0.37);
             }
             
             .\${prefix}-item:hover {
-              background: rgba(0, 0, 0, 0.35) !important;
-              border-color: rgba(255, 255, 255, 0.3) !important;
+              background: rgba(0, 0, 0, 0.35);
+              border-color: rgba(255, 255, 255, 0.3);
               box-shadow: 0 clamp(8px, 2cqw, 15px) clamp(18px, 4.5cqw, 35px) 0 rgba(0, 0, 0, 0.5);
             }
             
             .\${prefix}-business-name {
-              color: rgba(255, 255, 255, 0.95) !important;
+              color: rgba(255, 255, 255, 0.95);
             }
             
             .\${prefix}-description {
-              color: rgba(255, 255, 255, 0.7) !important;
+              color: rgba(255, 255, 255, 0.7);
             }
             
             .\${prefix}-image-wrapper {
@@ -356,14 +354,14 @@ exports.serveAdScript = async (req, res) => {
             }
             
             .\${prefix}-cta {
-              background: rgba(255, 255, 255, 0.1) !important;
-              color: rgba(255, 255, 255, 0.9) !important;
-              border-color: rgba(255, 255, 255, 0.2) !important;
+              background: rgba(255, 255, 255, 0.1);
+              color: rgba(255, 255, 255, 0.9);
+              border-color: rgba(255, 255, 255, 0.2);
             }
             
             .\${prefix}-cta:hover {
-              background: rgba(255, 255, 255, 0.2) !important;
-              border-color: rgba(255, 255, 255, 0.3) !important;
+              background: rgba(255, 255, 255, 0.2);
+              border-color: rgba(255, 255, 255, 0.3);
             }
           }
           
@@ -435,17 +433,19 @@ exports.serveAdScript = async (req, res) => {
           }
         \`;
         
-        // Append custom CSS if provided
+        // Append custom CSS AFTER base styles with increased specificity
         if (custom.customCSS) {
           const scopedCSS = custom.customCSS
-            .replace(/\\.ad-container/g, '.' + prefix + '-item')
-            .replace(/\\.ad-title/g, '.' + prefix + '-business-name')
-            .replace(/\\.ad-description/g, '.' + prefix + '-description')
-            .replace(/\\.ad-cta/g, '.' + prefix + '-cta')
-            .replace(/\\.ad-image/g, '.' + prefix + '-image')
-            .replace(/\\.ad-content/g, '.' + prefix + '-content');
+            .replace(/\\.ad-container(?!\\w)/g, '.' + prefix + '-item')
+            .replace(/\\.ad-title(?!\\w)/g, '.' + prefix + '-business-name')
+            .replace(/\\.ad-description(?!\\w)/g, '.' + prefix + '-description')
+            .replace(/\\.ad-cta(?!\\w)/g, '.' + prefix + '-cta')
+            .replace(/\\.ad-image(?!\\w)/g, '.' + prefix + '-image')
+            .replace(/\\.ad-content(?!\\w)/g, '.' + prefix + '-content')
+            .replace(/\\.ad-image-wrapper(?!\\w)/g, '.' + prefix + '-image-wrapper')
+            .replace(/\\.ad-text-content(?!\\w)/g, '.' + prefix + '-text-content');
           
-          baseStyles += '\\n/* Custom CSS */\\n' + scopedCSS;
+          baseStyles += '\\n\\n/* === CUSTOM CSS START === */\\n' + scopedCSS + '\\n/* === CUSTOM CSS END === */\\n';
         }
         
         return baseStyles;
@@ -550,7 +550,7 @@ exports.serveAdScript = async (req, res) => {
           '<div class="' + prefix + '-empty">' +
             '<div class="' + prefix + '-empty-title"><h3>' + translations[currentLang].title + '</h3></div>' +
             '<div class="' + prefix + '-empty-text"><p>' + translations[currentLang].price + ' $' + _p + '</p></div>' +
-            '<a href="https://yepper.cc/direct-ad?websiteId=' + _w + '&categoryId=' + _i + '" class="' + prefix + '-empty-link">' +
+            '<a href="http://localhost:3000/direct-ad?websiteId=' + _w + '&categoryId=' + _i + '" class="' + prefix + '-empty-link">' +
               '<span>' + translations[currentLang].action + '</span>' +
             '</a>' +
           '</div>';
