@@ -10,7 +10,7 @@ const Website = require('../../AdPromoter/models/CreateWebsiteModel');
 const { Wallet, WalletTransaction } = require('../../AdPromoter/models/walletModel');
 const mongoose = require('mongoose');
 
-const flw = new Flutterwave(process.env.FLW_TEST_PUBLIC_KEY, process.env.FLW_TEST_SECRET_KEY);
+const flw = new Flutterwave(process.env.FLW_PUBLIC_KEY, process.env.FLW_SECRET_KEY);
 
 const retryTransaction = async (operation, maxRetries = 3, baseDelay = 1000) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -143,7 +143,7 @@ exports.initiatePayment = async (req, res) => {
     // Call Flutterwave API
     const apiResponse = await axios.post('https://api.flutterwave.com/v3/payments', paymentData, {
       headers: {
-        'Authorization': `Bearer ${process.env.FLW_TEST_SECRET_KEY}`,
+        'Authorization': `Bearer ${process.env.FLW_SECRET_KEY}`,
         'Content-Type': 'application/json'
       }
     });
@@ -895,7 +895,7 @@ exports.initiatePaymentWithRefund = async (req, res) => {
     // Direct API call to Flutterwave
     const apiResponse = await axios.post('https://api.flutterwave.com/v3/payments', paymentData, {
       headers: {
-        'Authorization': `Bearer ${process.env.FLW_TEST_SECRET_KEY}`,
+        'Authorization': `Bearer ${process.env.FLW_SECRET_KEY}`,
         'Content-Type': 'application/json'
       }
     });
@@ -1501,11 +1501,11 @@ exports.processWalletPaymentInternal = async (data, session = null) => {
 exports.generateFlutterwavePaymentUrl = async (paymentData) => {
   try {
     // Check if Flutterwave secret key is configured
-    const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY || process.env.FLW_TEST_SECRET_KEY;
+    const flutterwaveSecretKey = process.env.FLW_SECRET_KEY || process.env.FLW_SECRET_KEY;
     const frontendUrl = process.env.FRONTEND_URL || 'https://yepper.cc';
     
     if (!flutterwaveSecretKey) {
-      console.error('Neither FLUTTERWAVE_SECRET_KEY nor FLW_TEST_SECRET_KEY environment variable is set');
+      console.error('Neither FLW_SECRET_KEY nor FLW_SECRET_KEY environment variable is set');
       throw new Error('Payment service configuration missing. Please contact support.');
     }
 
