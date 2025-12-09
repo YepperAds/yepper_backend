@@ -7,7 +7,7 @@ const passport = require('passport');
 require('dotenv').config();
 require('./config/passport');
 
-// User
+// Import routes
 const authRoutes = require('./routes/authRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const aiRoutes = require('./routes/aiRoutes');
@@ -19,10 +19,13 @@ const createCategoryRoutes = require('./AdPromoter/routes/createCategoryRoutes')
 const adDisplayRoutes = require('./AdPromoter/routes/AdDisplayRoutes');
 const businessCategoriesRoutes = require('./AdPromoter/routes/businessCategoriesRoutes');
 
-// AdOwner.js
+// Password Reset
+const passwordRoutes = require('./routes/passwordRoutes');
+
+// AdOwner
 const webAdvertiseRoutes = require('./AdOwner/routes/WebAdvertiseRoutes');
 
-const app = express();
+const app = express(); // ← INITIALIZE APP FIRST
 
 // Middleware
 app.use(express.json());
@@ -130,11 +133,17 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ===== ROUTES REGISTRATION =====
+// All routes must be registered AFTER app initialization
+
 // Auth Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/campaigns', campaignRoutes);
+
+// Password Reset Routes - ADD THIS HERE
+app.use('/api/password', passwordRoutes);
 
 // AdPromoter Routes
 app.use('/api/createWebsite', createWebsiteRoutes);
@@ -188,6 +197,7 @@ app.use((req, res) => {
       '/api/auth',
       '/api/conversations',
       '/api/ai',
+      '/api/password', // ADD THIS TO AVAILABLE ROUTES
       '/api/createWebsite',
       '/api/business-categories',
       '/api/ad-categories',
