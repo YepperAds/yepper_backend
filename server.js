@@ -11,6 +11,7 @@ require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const campaignRoutes = require('./routes/campaignRoutes');
 
 // Ad Promoter
 const createWebsiteRoutes = require('./AdPromoter/routes/createWebsiteRoutes');
@@ -133,6 +134,7 @@ app.use(passport.session());
 app.use('/api/auth', authRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/campaigns', campaignRoutes);
 
 // AdPromoter Routes
 app.use('/api/createWebsite', createWebsiteRoutes);
