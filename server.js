@@ -40,7 +40,8 @@ const allowedOrigins = [
   'https://www.yepper.cc',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
-  'https://waitlist-delta-ten.vercel.app',
+  'https://waitlist.yepper.cc',
+  'https://waitlist.yepper.cc/',
 ];
 
 const allowNullOriginPaths = [
