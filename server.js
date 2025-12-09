@@ -35,10 +35,12 @@ const allowedOrigins = [
   'http://yepper.cc',
   'http://localhost:3000',
   'https://yepper.cc/',
+  'https://yepper.cc',
   'https://yepper-backend-ll50.onrender.com',
   'https://www.yepper.cc',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
+  'https://waitlist-delta-ten.vercel.app',
 ];
 
 const allowNullOriginPaths = [

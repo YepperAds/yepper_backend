@@ -14,6 +14,7 @@ router.post('/login', authController.login);
 
 // Verify email
 router.get('/verify-email', authController.verifyEmail);
+router.get('/verify-waitlist-email', authController.verifyWaitlistEmail);
 
 // Resend verification
 router.post('/resend-verification', authController.resendVerification);

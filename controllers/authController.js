@@ -218,46 +218,46 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-// exports.verifyEmail = async (req, res) => {
-//   try {
-//     const { token, returnUrl } = req.query;
+exports.verifyWaitlistEmail = async (req, res) => {
+  try {
+    const { token, returnUrl } = req.query;
 
-//     if (!token) {
-//       return res.redirect(`${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-error?reason=missing_token`);
-//     }
+    if (!token) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-error?reason=missing_token`);
+    }
 
-//     const user = await User.findOne({
-//       verificationToken: token,
-//       verificationTokenExpires: { $gt: Date.now() }
-//     });
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: Date.now() }
+    });
 
-//     if (!user) {
-//       return res.redirect(`${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-error?reason=invalid_token`);
-//     }
+    if (!user) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-error?reason=invalid_token`);
+    }
 
-//     // Verify user and clear verification tokens
-//     user.isVerified = true;
-//     user.verificationToken = null;
-//     user.verificationTokenExpires = null;
-//     await user.save();
+    // Verify user and clear verification tokens
+    user.isVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+    await user.save();
 
-//     // Generate JWT token for automatic sign-in
-//     const authToken = generateToken(user._id);
+    // Generate JWT token for automatic sign-in
+    const authToken = generateToken(user._id);
 
-//     // NEW: Always redirect to verify-success page, but include returnUrl info
-//     let redirectUrl = `${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-success?token=${authToken}&auto_login=true`;
+    // NEW: Always redirect to verify-success page, but include returnUrl info
+    let redirectUrl = `${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-success?token=${authToken}&auto_login=true`;
     
-//     if (returnUrl) {
-//       // Add a flag to indicate this came from DirectAdvertise
-//       redirectUrl += '&fromDirectAdvertise=true';
-//     }
+    if (returnUrl) {
+      // Add a flag to indicate this came from DirectAdvertise
+      redirectUrl += '&fromDirectAdvertise=true';
+    }
 
-//     res.redirect(redirectUrl);
-//   } catch (error) {
-//     console.error('Email verification error:', error);
-//     res.redirect(`${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-error?reason=server_error`);
-//   }
-// };
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://yepper.cc'}/verify-error?reason=server_error`);
+  }
+};
 
 exports.login = async (req, res) => {
   try {
