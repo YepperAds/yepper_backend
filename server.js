@@ -11,7 +11,16 @@ require('./config/passport');
 const authRoutes = require('./routes/authRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const aiRoutes = require('./routes/aiRoutes');
-const campaignRoutes = require('./routes/campaignRoutes');
+// const campaignRoutes = require('./routes/campaignRoutes');
+
+const campaignSelectionRoutes = require('./campaigns/routes/campaignSelectionRoutes');
+const adultCampaignRoutes = require('./campaigns/adultCampaigns/routes/campaignSelectionRoutes');
+const carOwnersCampaignRoutes = require('./campaigns/carOwnersCampaigns/routes/campaignSelectionRoutes');
+const countrySideCampaignRoutes = require('./campaigns/countrySideCampaigns/routes/campaignSelectionRoutes');
+const parentsCampaignRoutes = require('./campaigns/parentsCampaigns/routes/campaignSelectionRoutes');
+const transportCampaignRoutes = require('./campaigns/transportersCampaigns/routes/campaignSelectionRoutes');
+const youthCampaignRoutes = require('./campaigns/youthCampaigns/routes/campaignSelectionRoutes');
+
 
 // Ad Promoter
 const createWebsiteRoutes = require('./AdPromoter/routes/createWebsiteRoutes');
@@ -143,7 +152,16 @@ app.use(passport.session());
 app.use('/api/auth', authRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/campaigns', campaignRoutes);
+// app.use('/api/campaigns', campaignRoutes);
+
+// campaigns
+app.use('/api/campaign-selections', campaignSelectionRoutes);
+app.use('/api/adult-campaign', adultCampaignRoutes);
+app.use('/api/carOwners-campaign', carOwnersCampaignRoutes);
+app.use('/api/countrySide-campaign', countrySideCampaignRoutes);
+app.use('/api/parents-campaign', parentsCampaignRoutes);
+app.use('/api/transport-campaign', transportCampaignRoutes);
+app.use('/api/youth-campaign', youthCampaignRoutes);
 
 // Password Reset Routes - ADD THIS HERE
 app.use('/api/password', passwordRoutes);
